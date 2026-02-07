@@ -21,23 +21,35 @@ schedule.get('/today', async (c) => {
       ORDER BY deadline ASC
     `).bind(today).all()
     
-    // 매일 반복되는 투표 (오늘 해당하는 것)
+    // 매일 반복되는 투표 (시간 범위 체크)
     const { results: recurringVotes } = await c.env.DB.prepare(`
       SELECT *, 'recurring' as schedule_type FROM votes 
       WHERE is_recurring = 1 
       AND recurrence_type = 'daily'
+      AND (
+        recurrence_start_time IS NULL 
+        OR recurrence_end_time IS NULL
+        OR (recurrence_start_time <= ? AND recurrence_end_time >= ?)
+        OR recurrence_start_time IS NULL
+      )
       ORDER BY recurrence_time ASC
-    `).all()
+    `).bind(currentTime, currentTime).all()
     
-    // 요일별 반복 투표 (오늘 요일에 해당)
+    // 요일별 반복 투표 (시간 범위 체크)
     const dayOfWeek = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][now.getDay()]
     const { results: weeklyVotes } = await c.env.DB.prepare(`
       SELECT *, 'recurring' as schedule_type FROM votes 
       WHERE is_recurring = 1 
       AND recurrence_type = 'weekly'
       AND recurrence_days LIKE ?
+      AND (
+        recurrence_start_time IS NULL 
+        OR recurrence_end_time IS NULL
+        OR (recurrence_start_time <= ? AND recurrence_end_time >= ?)
+        OR recurrence_start_time IS NULL
+      )
       ORDER BY recurrence_time ASC
-    `).bind(`%"${dayOfWeek}"%`).all()
+    `).bind(`%"${dayOfWeek}"%`, currentTime, currentTime).all()
     
     // 오늘 요청해야 하는 라디오
     const { results: todayRadio } = await c.env.DB.prepare(`
@@ -46,22 +58,48 @@ schedule.get('/today', async (c) => {
       ORDER BY request_time ASC
     `).bind(today).all()
     
-    // 매일 반복 라디오
+    // 매일 반복 라디오 (시간 범위 체크)
     const { results: recurringRadio } = await c.env.DB.prepare(`
       SELECT *, 'recurring' as schedule_type FROM radio_requests 
       WHERE is_recurring = 1 
       AND recurrence_type = 'daily'
+      AND (
+        recurrence_start_time IS NULL 
+        OR recurrence_end_time IS NULL
+        OR (recurrence_start_time <= ? AND recurrence_end_time >= ?)
+        OR recurrence_start_time IS NULL
+      )
       ORDER BY request_time ASC
-    `).all()
+    `).bind(currentTime, currentTime).all()
     
-    // 요일별 반복 라디오
+    // 요일별 반복 라디오 (시간 범위 체크)
     const { results: weeklyRadio } = await c.env.DB.prepare(`
       SELECT *, 'recurring' as schedule_type FROM radio_requests 
       WHERE is_recurring = 1 
       AND recurrence_type = 'weekly'
       AND recurrence_days LIKE ?
+      AND (
+        recurrence_start_time IS NULL 
+        OR recurrence_end_time IS NULL
+        OR (recurrence_start_time <= ? AND recurrence_end_time >= ?)
+        OR recurrence_start_time IS NULL
+      )
       ORDER BY request_time ASC
-    `).bind(`%"${dayOfWeek}"%`).all()
+    `).bind(`%"${dayOfWeek}"%`, currentTime, currentTime).all()
+    
+    // 시간 상태 추가 (지났는지, 진행중인지, 예정인지)
+    const addTimeStatus = (item: any) => {
+      if (!item.recurrence_start_time || !item.recurrence_end_time) {
+        return { ...item, timeStatus: 'all-day' }
+      }
+      if (currentTime < item.recurrence_start_time) {
+        return { ...item, timeStatus: 'upcoming' }
+      }
+      if (currentTime > item.recurrence_end_time) {
+        return { ...item, timeStatus: 'past' }
+      }
+      return { ...item, timeStatus: 'active' }
+    }
     
     return c.json({ 
       success: true, 
@@ -69,12 +107,12 @@ schedule.get('/today', async (c) => {
         date: today,
         currentTime: currentTime,
         votes: {
-          deadline: deadlineVotes,
-          recurring: [...recurringVotes, ...weeklyVotes]
+          deadline: deadlineVotes.map(addTimeStatus),
+          recurring: [...recurringVotes, ...weeklyVotes].map(addTimeStatus)
         },
         radio: {
-          specific: todayRadio,
-          recurring: [...recurringRadio, ...weeklyRadio]
+          specific: todayRadio.map(addTimeStatus),
+          recurring: [...recurringRadio, ...weeklyRadio].map(addTimeStatus)
         }
       }
     })

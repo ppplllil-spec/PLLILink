@@ -1,64 +1,10 @@
 // 전역 상태
-let currentTab = 'schedule'; // 기본 탭을 일정으로 변경
+let currentTab = 'schedule';
 let radioFilter = 'all';
 let isAutoFilling = false;
-let currentUser = null; // 현재 로그인한 사용자
-let sessionToken = null; // 세션 토큰
-
-// SHA-256 해시 함수
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hash))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-}
-
-// 로그인 확인
-async function checkLogin() {
-    const token = localStorage.getItem('session_token');
-    if (!token) return;
-    
-    try {
-        const response = await axios.post('/api/auth/verify', {
-            session_token: token
-        });
-        
-        if (response.data.success) {
-            currentUser = response.data.user;
-            sessionToken = token;
-            updateAuthUI();
-        } else {
-            localStorage.removeItem('session_token');
-        }
-    } catch (error) {
-        console.error('Session verify error:', error);
-        localStorage.removeItem('session_token');
-    }
-}
-
-// 인증 UI 업데이트
-function updateAuthUI() {
-    const loginBtn = document.getElementById('login-btn');
-    const userInfo = document.getElementById('user-info');
-    const userDisplayName = document.getElementById('user-display-name');
-    
-    if (currentUser) {
-        loginBtn.classList.add('hidden');
-        userInfo.classList.remove('hidden');
-        userInfo.classList.add('flex');
-        userDisplayName.textContent = currentUser.display_name || currentUser.username;
-    } else {
-        loginBtn.classList.remove('hidden');
-        userInfo.classList.add('hidden');
-        userInfo.classList.remove('flex');
-    }
-}
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
-    checkLogin();
     loadSchedule();
     loadVotes();
     loadAds();
@@ -139,20 +85,42 @@ async function loadSchedule() {
             if (schedule.votes.recurring.length === 0) {
                 recurringVotesEl.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">오늘 반복 투표가 없습니다</div>';
             } else {
-                recurringVotesEl.innerHTML = schedule.votes.recurring.map(vote => `
-                    <div class="card rounded-xl shadow-lg p-5">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="badge bg-purple-900/50 text-purple-300 border-purple-500"><i class="fas fa-sync-alt mr-1"></i>반복</span>
-                            ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500">${escapeHtml(vote.platform)}</span>` : ''}
+                recurringVotesEl.innerHTML = schedule.votes.recurring.map(vote => {
+                    const isPast = vote.timeStatus === 'past';
+                    const isUpcoming = vote.timeStatus === 'upcoming';
+                    const isAllDay = vote.timeStatus === 'all-day';
+                    const opacity = isPast ? 'opacity-50' : 'opacity-100';
+                    
+                    let timeDisplay = '';
+                    if (isAllDay) {
+                        timeDisplay = '<span class="badge bg-indigo-900/50 text-indigo-300 border-indigo-500"><i class="fas fa-infinity mr-1"></i>하루 종일</span>';
+                    } else if (vote.recurrence_start_time && vote.recurrence_end_time) {
+                        timeDisplay = `<p class="text-sm ${isPast ? 'text-gray-500' : isUpcoming ? 'text-yellow-400' : 'text-purple-400'} mb-2">
+                            <i class="far fa-clock mr-1"></i>
+                            ${vote.recurrence_start_time} ~ ${vote.recurrence_end_time}
+                            ${isPast ? ' (종료됨)' : isUpcoming ? ' (예정)' : ' (진행중)'}
+                        </p>`;
+                    } else if (vote.recurrence_time) {
+                        timeDisplay = `<p class="text-sm text-purple-400 mb-2"><i class="far fa-clock mr-1"></i>매일 ${vote.recurrence_time}</p>`;
+                    }
+                    
+                    return `
+                        <div class="card rounded-xl shadow-lg p-5 ${opacity} transition-opacity">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="badge bg-purple-900/50 text-purple-300 border-purple-500"><i class="fas fa-sync-alt mr-1"></i>반복</span>
+                                ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500">${escapeHtml(vote.platform)}</span>` : ''}
+                                ${isPast ? '<span class="badge bg-gray-700/50 text-gray-400 border-gray-600"><i class="fas fa-check mr-1"></i>종료</span>' : ''}
+                                ${isUpcoming ? '<span class="badge bg-yellow-900/50 text-yellow-300 border-yellow-500"><i class="fas fa-hourglass-start mr-1"></i>예정</span>' : ''}
+                            </div>
+                            <h4 class="text-lg font-bold ${isPast ? 'text-gray-400' : 'text-cyan-300'} mb-2">${escapeHtml(vote.title)}</h4>
+                            ${vote.description ? `<p class="${isPast ? 'text-gray-500' : 'text-gray-300'} text-sm mb-3">${escapeHtml(vote.description)}</p>` : ''}
+                            ${timeDisplay}
+                            <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all font-bold text-sm ${isPast ? 'opacity-50 pointer-events-none' : ''}">
+                                <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
+                            </a>
                         </div>
-                        <h4 class="text-lg font-bold text-cyan-300 mb-2">${escapeHtml(vote.title)}</h4>
-                        ${vote.description ? `<p class="text-gray-300 text-sm mb-3">${escapeHtml(vote.description)}</p>` : ''}
-                        ${vote.recurrence_time ? `<p class="text-sm text-purple-400 mb-2"><i class="far fa-clock mr-1"></i>매일 ${vote.recurrence_time}</p>` : ''}
-                        <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all font-bold text-sm">
-                            <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
-                        </a>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         }
         
@@ -163,26 +131,48 @@ async function loadSchedule() {
             if (allRadio.length === 0) {
                 todayRadioEl.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">오늘 라디오 요청이 없습니다</div>';
             } else {
-                todayRadioEl.innerHTML = allRadio.map(radio => `
-                    <div class="card rounded-xl shadow-lg p-5">
-                        <div class="flex items-center gap-2 mb-2">
-                            ${radio.schedule_type === 'recurring' ? 
-                                '<span class="badge bg-purple-900/50 text-purple-300 border-purple-500"><i class="fas fa-sync-alt mr-1"></i>반복</span>' :
-                                '<span class="badge bg-green-900/50 text-green-300 border-green-500"><i class="fas fa-calendar-day mr-1"></i>특정일</span>'
-                            }
-                            <span class="badge ${radio.country === 'domestic' ? 'bg-blue-900/50 text-blue-300 border-blue-500' : 'bg-green-900/50 text-green-300 border-green-500'}">
-                                ${radio.country === 'domestic' ? '국내' : '해외'}
-                            </span>
+                todayRadioEl.innerHTML = allRadio.map(radio => {
+                    const isPast = radio.timeStatus === 'past';
+                    const isUpcoming = radio.timeStatus === 'upcoming';
+                    const isAllDay = radio.timeStatus === 'all-day';
+                    const opacity = isPast ? 'opacity-50' : 'opacity-100';
+                    
+                    let timeDisplay = '';
+                    if (isAllDay) {
+                        timeDisplay = '<span class="badge bg-indigo-900/50 text-indigo-300 border-indigo-500"><i class="fas fa-infinity mr-1"></i>하루 종일</span>';
+                    } else if (radio.recurrence_start_time && radio.recurrence_end_time) {
+                        timeDisplay = `<p class="text-sm ${isPast ? 'text-gray-500' : isUpcoming ? 'text-yellow-400' : 'text-green-400'} mb-2">
+                            <i class="far fa-clock mr-1"></i>
+                            ${radio.recurrence_start_time} ~ ${radio.recurrence_end_time}
+                            ${isPast ? ' (종료됨)' : isUpcoming ? ' (예정)' : ' (진행중)'}
+                        </p>`;
+                    } else if (radio.request_time) {
+                        timeDisplay = `<p class="text-sm text-green-400 mb-2"><i class="far fa-clock mr-1"></i>${radio.request_time}</p>`;
+                    }
+                    
+                    return `
+                        <div class="card rounded-xl shadow-lg p-5 ${opacity} transition-opacity">
+                            <div class="flex items-center gap-2 mb-2 flex-wrap">
+                                ${radio.schedule_type === 'recurring' ? 
+                                    '<span class="badge bg-purple-900/50 text-purple-300 border-purple-500"><i class="fas fa-sync-alt mr-1"></i>반복</span>' :
+                                    '<span class="badge bg-green-900/50 text-green-300 border-green-500"><i class="fas fa-calendar-day mr-1"></i>특정일</span>'
+                                }
+                                <span class="badge ${radio.country === 'domestic' ? 'bg-blue-900/50 text-blue-300 border-blue-500' : 'bg-green-900/50 text-green-300 border-green-500'}">
+                                    ${radio.country === 'domestic' ? '국내' : '해외'}
+                                </span>
+                                ${isPast ? '<span class="badge bg-gray-700/50 text-gray-400 border-gray-600"><i class="fas fa-check mr-1"></i>종료</span>' : ''}
+                                ${isUpcoming ? '<span class="badge bg-yellow-900/50 text-yellow-300 border-yellow-500"><i class="fas fa-hourglass-start mr-1"></i>예정</span>' : ''}
+                            </div>
+                            <h4 class="text-lg font-bold ${isPast ? 'text-gray-400' : 'text-cyan-400'} mb-1">${escapeHtml(radio.station_name)}</h4>
+                            ${radio.program_name ? `<p class="${isPast ? 'text-gray-500' : 'text-gray-300'} text-sm mb-2">${escapeHtml(radio.program_name)}</p>` : ''}
+                            ${timeDisplay}
+                            ${radio.description ? `<p class="text-gray-400 text-xs mb-3">${escapeHtml(radio.description)}</p>` : ''}
+                            ${radio.request_url ? `<a href="${escapeHtml(radio.request_url)}" target="_blank" class="block cyber-link text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all font-bold text-sm ${isPast ? 'opacity-50 pointer-events-none' : ''}">
+                                <i class="fas fa-external-link-alt mr-2"></i>신청하러 가기
+                            </a>` : ''}
                         </div>
-                        <h4 class="text-lg font-bold text-cyan-400 mb-1">${escapeHtml(radio.station_name)}</h4>
-                        ${radio.program_name ? `<p class="text-gray-300 text-sm mb-2">${escapeHtml(radio.program_name)}</p>` : ''}
-                        ${radio.request_time ? `<p class="text-sm text-green-400 mb-2"><i class="far fa-clock mr-1"></i>${radio.request_time}</p>` : ''}
-                        ${radio.description ? `<p class="text-gray-400 text-xs mb-3">${escapeHtml(radio.description)}</p>` : ''}
-                        ${radio.request_url ? `<a href="${escapeHtml(radio.request_url)}" target="_blank" class="block cyber-link text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all font-bold text-sm">
-                            <i class="fas fa-external-link-alt mr-2"></i>신청하러 가기
-                        </a>` : ''}
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         }
         
@@ -421,9 +411,20 @@ function openAddModal() {
                 </label>
                 <div id="recurring-fields" class="hidden space-y-3">
                     <div>
-                        <label class="text-sm text-gray-400 mb-1 block">투표 시간</label>
+                        <label class="text-sm text-gray-400 mb-1 block">투표 시간 (선택)</label>
                         <input type="time" name="recurrence_time" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
                     </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-sm text-gray-400 mb-1 block">시작 시간 (선택)</label>
+                            <input type="time" name="recurrence_start_time" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-400 mb-1 block">종료 시간 (선택)</label>
+                            <input type="time" name="recurrence_end_time" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500">* 시작/종료 시간을 입력하지 않으면 하루 종일 표시됩니다</p>
                     <div>
                         <label class="text-sm text-gray-400 mb-2 block">반복 요일 (선택)</label>
                         <div class="grid grid-cols-7 gap-2">
@@ -585,28 +586,6 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
 // 항목 삭제
 // 항목 수정
 async function editItem(type, id) {
-    // 관리자인 경우 바로 수정
-    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator')) {
-        openEditModal(type, id);
-        return;
-    }
-    
-    // 비회원인 경우 비밀번호 확인
-    openPasswordModal(async (password) => {
-        try {
-            const passwordHash = await hashPassword(password);
-            
-            // 비밀번호 확인 API 호출 (간단 구현: 수정 시도로 대체)
-            openEditModal(type, id, password);
-        } catch (error) {
-            console.error('Password verify error:', error);
-            alert('비밀번호 확인에 실패했습니다.');
-        }
-    });
-}
-
-// 수정 모달 열기 (실제 구현은 간단하게 프롬프트 사용)
-async function openEditModal(type, id, password = null) {
     try {
         // 기존 데이터 가져오기
         const response = await axios.get(`/api/${type}/${id}`);
@@ -620,9 +599,7 @@ async function openEditModal(type, id, password = null) {
         // 수정 요청
         const updateData = {
             title: newTitle,
-            description: newDescription,
-            session_token: sessionToken,
-            password: password
+            description: newDescription
         };
         
         // type별 추가 필드
@@ -651,46 +628,19 @@ async function openEditModal(type, id, password = null) {
 async function deleteItem(type, id) {
     if (!confirm('정말 삭제하시겠습니까?')) return;
     
-    // 관리자인 경우 바로 삭제
-    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator')) {
-        try {
-            await axios.delete(`/api/${type}/${id}`, {
-                data: { session_token: sessionToken }
-            });
-            
-            // 데이터 새로고침
-            if (type === 'votes') loadVotes();
-            else if (type === 'ad-requests') loadAds();
-            else if (type === 'radio-requests') loadRadio();
-            else if (type === 'tips') loadTips();
-            
-            alert('삭제되었습니다.');
-        } catch (error) {
-            alert('삭제 실패: ' + (error.response?.data?.error || '알 수 없는 오류'));
-        }
-        return;
+    try {
+        await axios.delete(`/api/${type}/${id}`);
+        
+        // 데이터 새로고침
+        if (type === 'votes') loadVotes();
+        else if (type === 'ad-requests') loadAds();
+        else if (type === 'radio-requests') loadRadio();
+        else if (type === 'tips') loadTips();
+        
+        alert('삭제되었습니다.');
+    } catch (error) {
+        alert('삭제 실패: ' + (error.response?.data?.error || '알 수 없는 오류'));
     }
-    
-    // 비회원인 경우 비밀번호 확인
-    openPasswordModal(async (password) => {
-        try {
-            const passwordHash = await hashPassword(password);
-            
-            await axios.delete(`/api/${type}/${id}`, {
-                data: { password }
-            });
-            
-            // 데이터 새로고침
-            if (type === 'votes') loadVotes();
-            else if (type === 'ad-requests') loadAds();
-            else if (type === 'radio-requests') loadRadio();
-            else if (type === 'tips') loadTips();
-            
-            alert('삭제되었습니다.');
-        } catch (error) {
-            alert('삭제 실패: ' + (error.response?.data?.error || '알 수 없는 오류'));
-        }
-    });
 }
 
 // XSS 방지를 위한 HTML 이스케이프
