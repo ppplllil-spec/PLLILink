@@ -1,5 +1,9 @@
 import { Hono } from 'hono'
-import type { Bindings } from '../types'
+import type { D1Database } from '@cloudflare/workers-types'
+
+type Bindings = {
+  DB: D1Database
+}
 
 const adRequests = new Hono<{ Bindings: Bindings }>()
 
@@ -21,21 +25,21 @@ adRequests.get('/', async (c) => {
 adRequests.get('/:id', async (c) => {
   try {
     const id = c.req.param('id')
-    const { results } = await c.env.DB.prepare(`
+    const adRequest = await c.env.DB.prepare(`
       SELECT * FROM ad_requests WHERE id = ?
-    `).bind(id).all()
+    `).bind(id).first()
     
-    if (results.length === 0) {
+    if (!adRequest) {
       return c.json({ success: false, error: 'Ad request not found' }, 404)
     }
     
-    return c.json({ success: true, data: results[0] })
+    return c.json({ success: true, data: adRequest })
   } catch (error) {
     return c.json({ success: false, error: 'Failed to fetch ad request' }, 500)
   }
 })
 
-// 광고 시안 요청 등록
+// 광고 시안 요청 생성
 adRequests.post('/', async (c) => {
   try {
     const body = await c.req.json()
@@ -48,29 +52,9 @@ adRequests.post('/', async (c) => {
     const result = await c.env.DB.prepare(`
       INSERT INTO ad_requests (title, description, location, contact_info, deadline, status, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      title, 
-      description || null, 
-      location, 
-      contact_info || null, 
-      deadline || null, 
-      status || 'open', 
-      created_by || null
-    ).run()
+    `).bind(title, description || null, location, contact_info || null, deadline || null, status || 'open', created_by || null).run()
     
-    return c.json({ 
-      success: true, 
-      data: { 
-        id: result.meta.last_row_id, 
-        title, 
-        description, 
-        location, 
-        contact_info, 
-        deadline, 
-        status: status || 'open',
-        created_by 
-      }
-    }, 201)
+    return c.json({ success: true, data: { id: result.meta.last_row_id } }, 201)
   } catch (error) {
     return c.json({ success: false, error: 'Failed to create ad request' }, 500)
   }
@@ -83,20 +67,17 @@ adRequests.put('/:id', async (c) => {
     const body = await c.req.json()
     const { title, description, location, contact_info, deadline, status } = body
     
-    if (!title || !location) {
-      return c.json({ success: false, error: 'Title and location are required' }, 400)
-    }
-    
-    await c.env.DB.prepare(`
+    const result = await c.env.DB.prepare(`
       UPDATE ad_requests 
       SET title = ?, description = ?, location = ?, contact_info = ?, deadline = ?, status = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).bind(title, description || null, location, contact_info || null, deadline || null, status || 'open', id).run()
+    `).bind(title, description, location, contact_info, deadline, status, id).run()
     
-    return c.json({ 
-      success: true, 
-      data: { id, title, description, location, contact_info, deadline, status }
-    })
+    if (result.meta.changes === 0) {
+      return c.json({ success: false, error: 'Ad request not found' }, 404)
+    }
+    
+    return c.json({ success: true, message: 'Ad request updated' })
   } catch (error) {
     return c.json({ success: false, error: 'Failed to update ad request' }, 500)
   }
@@ -107,11 +88,15 @@ adRequests.delete('/:id', async (c) => {
   try {
     const id = c.req.param('id')
     
-    await c.env.DB.prepare(`
+    const result = await c.env.DB.prepare(`
       DELETE FROM ad_requests WHERE id = ?
     `).bind(id).run()
     
-    return c.json({ success: true, message: 'Ad request deleted successfully' })
+    if (result.meta.changes === 0) {
+      return c.json({ success: false, error: 'Ad request not found' }, 404)
+    }
+    
+    return c.json({ success: true, message: 'Ad request deleted' })
   } catch (error) {
     return c.json({ success: false, error: 'Failed to delete ad request' }, 500)
   }

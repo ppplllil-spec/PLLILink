@@ -1,329 +1,236 @@
-# 팬덤 정보 공유 플랫폼
+# 팬덤 커뮤니티 - 투표·광고·라디오 정보 공유 플랫폼
 
 ## 프로젝트 개요
-- **이름**: 팬덤 정보 공유 플랫폼
-- **목표**: 팬들이 모여 투표 정보, 광고 시안 요청, 국내외 라디오 신청 정보를 실시간으로 공유하는 웹 플랫폼
+
+팬들이 모여 투표 정보, 광고 시안 요청, 국내외 라디오 신청 정보를 실시간으로 공유하는 웹 애플리케이션입니다. 투표앱별 유용한 팁도 공유하여 팬활동을 더욱 효율적으로 할 수 있습니다.
+
+- **이름**: 팬덤 커뮤니티 웹앱
+- **목표**: 팬덤 활동에 필요한 정보를 한곳에서 관리하고 공유
 - **주요 기능**:
-  - 📊 투표 정보 등록 및 공유
-  - 🎨 광고 시안 요청 관리
-  - 📻 국내/해외 라디오 신청 정보 제공
-  - 실시간 정보 업데이트
-  - 카테고리별 필터링 기능
+  - 투표 정보 등록 및 공유
+  - 광고 시안 요청 등록
+  - 국내외 라디오 신청 정보 관리
+  - 투표앱별 팁 공유 및 '도움됨' 반응 시스템
 
-## URLs
+## 🌐 URL
+
 - **개발 서버**: https://3000-i5354ajam1oqpq3wdemye-02b9cc79.sandbox.novita.ai
-- **API 엔드포인트**:
-  - 투표: `/api/votes`
-  - 광고 시안: `/api/ad-requests`
-  - 라디오: `/api/radio-requests`
+- **API Base URL**: https://3000-i5354ajam1oqpq3wdemye-02b9cc79.sandbox.novita.ai/api
 
-## 데이터 아키텍처
+## ✨ 주요 기능
+
+### 1. 투표 정보 관리
+- 투표 제목, 설명, URL, 플랫폼, 마감일 등록
+- 플랫폼별 분류 (Twitter, Mnet, Billboard 등)
+- 투표 링크 원클릭 이동
+- 각 투표별 팁 조회 기능
+
+### 2. 광고 시안 요청 관리
+- 광고 제목, 위치, 설명, 연락처 등록
+- 상태 관리 (모집중, 진행중, 마감)
+- 마감일 설정
+
+### 3. 라디오 신청 정보 관리
+- 방송국 및 프로그램 정보 등록
+- 국내/해외 분류 필터링
+- 신청 방법 및 URL 제공
+
+### 4. 투표 팁 공유 시스템 ⭐ NEW
+- 플랫폼별 투표 팁 공유
+- 검증된 팁 표시 기능
+- '도움됨' 반응 시스템 (중복 방지)
+- 도움됨 수에 따른 정렬
+
+## 🏗️ 데이터 아키텍처
 
 ### 데이터 모델
 
-#### Votes (투표 정보)
-```sql
-- id: INTEGER (자동증가)
-- title: TEXT (필수) - 투표 제목
-- description: TEXT - 설명
-- vote_url: TEXT (필수) - 투표 링크
-- deadline: DATETIME - 마감일
-- platform: TEXT - 플랫폼명 (Twitter, Mnet 등)
-- category: TEXT - 카테고리 (기본값: 'vote')
-- created_by: TEXT - 작성자
-- created_at: DATETIME - 등록일
-- updated_at: DATETIME - 수정일
-```
+#### 1. votes (투표 정보)
+- id, title, description, vote_url, deadline, platform, category, created_by, created_at, updated_at
 
-#### Ad Requests (광고 시안 요청)
-```sql
-- id: INTEGER (자동증가)
-- title: TEXT (필수) - 제목
-- description: TEXT - 설명
-- location: TEXT (필수) - 광고 위치
-- contact_info: TEXT - 연락처
-- deadline: DATETIME - 마감일
-- category: TEXT - 카테고리 (기본값: 'ad')
-- status: TEXT - 상태 (open, in_progress, closed)
-- created_by: TEXT - 작성자
-- created_at: DATETIME - 등록일
-- updated_at: DATETIME - 수정일
-```
+#### 2. ad_requests (광고 시안 요청)
+- id, title, description, location, contact_info, deadline, status, category, created_by, created_at, updated_at
 
-#### Radio Requests (라디오 신청 정보)
-```sql
-- id: INTEGER (자동증가)
-- title: TEXT (필수) - 제목
-- station_name: TEXT (필수) - 방송국명
-- program_name: TEXT - 프로그램명
-- request_url: TEXT - 신청 링크
-- request_method: TEXT - 신청 방법
-- country: TEXT - 국가 (domestic, international)
-- category: TEXT - 카테고리 (기본값: 'radio')
-- description: TEXT - 설명
-- created_by: TEXT - 작성자
-- created_at: DATETIME - 등록일
-- updated_at: DATETIME - 수정일
-```
+#### 3. radio_requests (라디오 신청 정보)
+- id, title, station_name, program_name, request_url, request_method, country, description, category, created_by, created_at, updated_at
+
+#### 4. vote_tips (투표 팁)
+- id, vote_id (FK), platform, tip_title, tip_content, is_verified, helpful_count, created_by, created_at, updated_at
+
+#### 5. tip_reactions (팁 반응)
+- id, tip_id (FK), user_identifier, reaction_type, created_at
 
 ### 스토리지 서비스
-- **Cloudflare D1**: SQLite 기반 관계형 데이터베이스
-  - 로컬 개발: `.wrangler/state/v3/d1` (--local 플래그 사용)
-  - 프로덕션: webapp-production 데이터베이스
+- **Cloudflare D1 Database**: SQLite 기반 관계형 데이터베이스
+- **로컬 개발**: `.wrangler/state/v3/d1` 디렉토리에 로컬 SQLite DB
+- **인덱싱**: 생성일시, 카테고리, 상태, 국가, 플랫폼별 인덱스 최적화
 
 ### 데이터 흐름
-1. 사용자가 웹 인터페이스에서 정보 등록
-2. Axios를 통해 Hono API로 POST 요청
-3. Hono 라우트 핸들러가 D1 데이터베이스에 저장
-4. 저장된 데이터를 GET 요청으로 실시간 조회
-5. 프론트엔드에서 목록으로 표시
+1. 사용자가 웹 UI에서 정보 입력
+2. Axios를 통해 Hono API 엔드포인트로 POST 요청
+3. Hono가 Cloudflare D1 데이터베이스에 저장
+4. GET 요청으로 데이터 조회 및 화면 렌더링
+5. 팁 '도움됨' 반응은 localStorage로 사용자 식별 (중복 방지)
 
-## 사용자 가이드
+## 📡 API 엔드포인트
 
-### 투표 정보 등록
-1. "투표 정보" 탭 선택
-2. 투표 제목과 투표 링크 입력 (필수)
-3. 플랫폼, 설명, 마감일, 작성자 정보 입력 (선택)
-4. "등록하기" 버튼 클릭
-5. 등록된 정보가 아래 목록에 실시간 표시
+### 투표 정보 API
+- `GET /api/votes` - 투표 목록 조회
+- `GET /api/votes/:id` - 투표 상세 조회
+- `POST /api/votes` - 투표 생성
+- `PUT /api/votes/:id` - 투표 수정
+- `DELETE /api/votes/:id` - 투표 삭제
 
-### 광고 시안 요청
-1. "광고 시안 요청" 탭 선택
-2. 제목과 위치 입력 (필수)
-3. 설명, 연락처, 마감일, 상태, 작성자 입력 (선택)
-4. 상태는 "진행중", "작업중", "완료" 중 선택
-5. "등록하기" 버튼 클릭
+### 광고 시안 요청 API
+- `GET /api/ad-requests` - 광고 요청 목록 조회
+- `GET /api/ad-requests/:id` - 광고 요청 상세 조회
+- `POST /api/ad-requests` - 광고 요청 생성
+- `PUT /api/ad-requests/:id` - 광고 요청 수정
+- `DELETE /api/ad-requests/:id` - 광고 요청 삭제
 
-### 라디오 신청 정보
-1. "라디오 신청" 탭 선택
-2. 제목과 방송국명 입력 (필수)
-3. 프로그램명, 국가(국내/해외), 신청 링크, 신청 방법, 설명 입력 (선택)
-4. "등록하기" 버튼 클릭
-5. "전체", "국내", "해외" 필터로 정보 검색
+### 라디오 신청 정보 API
+- `GET /api/radio-requests` - 라디오 정보 목록 조회
+- `GET /api/radio-requests?country=domestic` - 국내 라디오만 조회
+- `GET /api/radio-requests?country=international` - 해외 라디오만 조회
+- `GET /api/radio-requests/:id` - 라디오 정보 상세 조회
+- `POST /api/radio-requests` - 라디오 정보 생성
+- `PUT /api/radio-requests/:id` - 라디오 정보 수정
+- `DELETE /api/radio-requests/:id` - 라디오 정보 삭제
 
-### 정보 삭제
-- 각 카드 우측 상단의 휴지통 아이콘 클릭
-- 확인 대화상자에서 "확인" 클릭
+### 투표 팁 API ⭐ NEW
+- `GET /api/tips` - 전체 팁 목록 조회 (도움됨 순)
+- `GET /api/tips?vote_id=1` - 특정 투표의 팁만 조회
+- `GET /api/tips?platform=Twitter` - 특정 플랫폼의 팁만 조회
+- `GET /api/tips/:id` - 팁 상세 조회
+- `POST /api/tips` - 팁 생성
+- `PUT /api/tips/:id` - 팁 수정
+- `DELETE /api/tips/:id` - 팁 삭제
+- `POST /api/tips/:id/helpful` - 팁에 '도움됨' 반응 추가
 
-## 배포 현황
-- **플랫폼**: Cloudflare Pages (준비 중)
-- **상태**: ✅ 개발 서버 활성화
-- **기술 스택**: 
-  - Backend: Hono + TypeScript
-  - Frontend: Vanilla JavaScript + Tailwind CSS
-  - Database: Cloudflare D1 (SQLite)
-  - Deployment: Cloudflare Pages + Wrangler
-- **마지막 업데이트**: 2026-02-07
+## 🎨 사용자 가이드
 
-## 로컬 개발 환경 설정
+### 정보 조회하기
+1. 상단 탭에서 원하는 카테고리 선택 (투표, 광고, 라디오, 팁)
+2. 카드 형태로 표시된 정보 확인
+3. 라디오는 국내/해외 필터링 가능
 
-### 필수 요구사항
+### 새 정보 추가하기
+1. 우측 상단 "새 정보 추가" 버튼 클릭
+2. 현재 탭에 맞는 폼이 자동으로 표시됨
+3. 필수 항목 입력 후 저장
+
+### 투표 팁 활용하기
+1. 투표 카드 하단 "이 투표의 팁 보기" 클릭
+2. 해당 투표에 관련된 팁만 필터링하여 표시
+3. 도움이 된 팁에 '도움됨' 버튼 클릭 (중복 불가)
+4. 도움됨이 많은 팁이 상단에 표시됨
+
+### 정보 삭제하기
+- 각 카드 우측 상단 휴지통 아이콘 클릭
+
+## 🚀 배포
+
+### 플랫폼
+- **Cloudflare Pages** (배포 대기중)
+
+### 상태
+- ✅ 로컬 개발 환경 구축 완료
+- ✅ D1 데이터베이스 마이그레이션 완료
+- ✅ 모든 API 엔드포인트 정상 작동
+- ✅ 프론트엔드 UI 완성
+- ⏳ Cloudflare Pages 프로덕션 배포 예정
+
+### 기술 스택
+- **프론트엔드**: HTML5, Tailwind CSS, Vanilla JavaScript, Axios
+- **백엔드**: Hono v4.11.8 (TypeScript)
+- **데이터베이스**: Cloudflare D1 (SQLite)
+- **빌드 도구**: Vite 6.4.1
+- **배포**: Cloudflare Pages, Wrangler 4.63.0
+
+### 마지막 업데이트
+2026-02-07
+
+## 🛠️ 로컬 개발
+
+### 요구사항
 - Node.js 18+
 - npm
 
 ### 설치 및 실행
+
 ```bash
 # 의존성 설치
 npm install
 
-# D1 로컬 데이터베이스 마이그레이션
+# 데이터베이스 마이그레이션
 npm run db:migrate:local
 
-# 테스트 데이터 삽입
+# 테스트 데이터 시드
 npm run db:seed
 
 # 프로젝트 빌드
 npm run build
 
-# PM2로 개발 서버 시작
+# 개발 서버 시작 (PM2)
 pm2 start ecosystem.config.cjs
 
-# 서비스 상태 확인
-pm2 list
+# 서버 로그 확인
+pm2 logs webapp --nostream
 
-# 로그 확인
-pm2 logs fandom-webapp --nostream
-
-# 서비스 재시작
-pm2 restart fandom-webapp
-
-# 서비스 중지
-pm2 stop fandom-webapp
+# 서버 중지
+pm2 stop webapp
 ```
 
-### 주요 npm 스크립트
+### 데이터베이스 관리
+
 ```bash
-npm run dev              # Vite 개발 서버
-npm run build            # 프로덕션 빌드
-npm run dev:d1           # D1 연동 개발 서버
-npm run db:migrate:local # 로컬 DB 마이그레이션
-npm run db:seed          # 테스트 데이터 삽입
-npm run db:reset         # DB 초기화 및 재설정
-npm run deploy           # Cloudflare Pages 배포
+# 로컬 DB 리셋 (마이그레이션 + 시드)
+npm run db:reset
+
+# 로컬 DB 쿼리 실행
+npm run db:console:local -- --command="SELECT * FROM votes"
 ```
 
-## API 문서
+## 📈 향후 개발 계획
 
-### 투표 정보 API
+### 완료된 기능
+- ✅ 투표 정보 CRUD
+- ✅ 광고 시안 요청 CRUD
+- ✅ 라디오 신청 정보 CRUD
+- ✅ 투표앱별 팁 공유 시스템
+- ✅ 팁 '도움됨' 반응 시스템
+- ✅ 실시간 목록 표시
+- ✅ 반응형 UI 디자인
 
-#### GET /api/votes
-모든 투표 정보 조회
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "title": "2024 아시아 뮤직 어워드 투표",
-      "description": "우리 아티스트 투표 참여 부탁드립니다!",
-      "vote_url": "https://example.com/vote/ama2024",
-      "deadline": "2024-12-31 23:59:59",
-      "platform": "Twitter",
-      "category": "vote",
-      "created_by": "팬매니저",
-      "created_at": "2026-02-07 14:17:49",
-      "updated_at": "2026-02-07 14:17:49"
-    }
-  ]
-}
-```
+### 추천 개발 항목
+1. **사용자 인증 시스템**
+   - 로그인/회원가입 기능
+   - 작성자 권한 관리
 
-#### POST /api/votes
-새 투표 정보 등록
-```json
-// Request
-{
-  "title": "투표 제목",
-  "vote_url": "https://example.com/vote",
-  "description": "설명",
-  "platform": "Twitter",
-  "deadline": "2024-12-31 23:59:59",
-  "created_by": "작성자"
-}
+2. **댓글 시스템**
+   - 각 정보에 댓글 작성 기능
+   - 실시간 댓글 업데이트
 
-// Response
-{
-  "success": true,
-  "data": { ... }
-}
-```
+3. **검색 및 필터링 강화**
+   - 키워드 검색 기능
+   - 다중 필터 조합
 
-#### DELETE /api/votes/:id
-투표 정보 삭제
+4. **알림 기능**
+   - 마감일 임박 알림
+   - 새 투표 정보 알림
 
-### 광고 시안 API
+5. **이미지 업로드**
+   - 광고 시안 이미지 첨부
+   - Cloudflare R2 스토리지 활용
 
-#### GET /api/ad-requests
-모든 광고 시안 요청 조회
+6. **통계 대시보드**
+   - 가장 인기있는 투표
+   - 활동 통계 시각화
 
-#### POST /api/ad-requests
-새 광고 시안 요청 등록
-```json
-// Request
-{
-  "title": "강남역 전광판 광고",
-  "location": "강남역 11번 출구",
-  "description": "설명",
-  "contact_info": "email@example.com",
-  "deadline": "2024-12-31 23:59:59",
-  "status": "open",
-  "created_by": "작성자"
-}
-```
+## 📝 라이선스
 
-### 라디오 신청 API
-
-#### GET /api/radio-requests?country=domestic
-라디오 신청 정보 조회 (필터링 옵션)
-- Query Parameter: `country` (domestic, international, 또는 생략)
-
-#### POST /api/radio-requests
-새 라디오 신청 정보 등록
-```json
-// Request
-{
-  "title": "KBS 쿨FM 신청 방법",
-  "station_name": "KBS 쿨FM",
-  "program_name": "볼륨을 높여요",
-  "request_url": "https://kbs.co.kr/radio/request",
-  "request_method": "앱 또는 웹사이트",
-  "country": "domestic",
-  "description": "평일 저녁 7시~9시 신청 가능",
-  "created_by": "작성자"
-}
-```
-
-## 완료된 기능
-- ✅ Cloudflare D1 데이터베이스 설계 및 마이그레이션
-- ✅ 투표 정보 CRUD API
-- ✅ 광고 시안 요청 CRUD API
-- ✅ 라디오 신청 정보 CRUD API (국내/해외 필터링)
-- ✅ 반응형 UI (Tailwind CSS)
-- ✅ 실시간 데이터 로딩
-- ✅ 카테고리별 탭 전환
-- ✅ 삭제 기능
-- ✅ PM2 프로세스 관리
-- ✅ 테스트 데이터 시딩
-
-## 미구현 기능 및 개선 사항
-- ⏳ 투표/광고/라디오 정보 수정 기능
-- ⏳ 사용자 인증 및 권한 관리
-- ⏳ 이미지 업로드 (Cloudflare R2 연동)
-- ⏳ 검색 기능
-- ⏳ 페이지네이션
-- ⏳ 좋아요/북마크 기능
-- ⏳ 댓글 시스템
-- ⏳ 알림 기능
-- ⏳ Cloudflare Pages 프로덕션 배포
-
-## 추천 다음 단계
-1. **수정 기능 구현**: PUT API와 수정 UI 추가
-2. **검색 기능**: 제목/설명 기반 전체 검색
-3. **페이지네이션**: 대량 데이터 처리를 위한 페이징
-4. **사용자 인증**: Cloudflare Access 또는 OAuth 연동
-5. **프로덕션 배포**: Cloudflare Pages에 배포 및 커스텀 도메인 설정
-
-## 프로젝트 구조
-```
-webapp/
-├── src/
-│   ├── index.tsx              # 메인 애플리케이션 + UI
-│   ├── types/
-│   │   └── index.ts           # TypeScript 타입 정의
-│   └── routes/
-│       ├── votes.ts           # 투표 API 라우트
-│       ├── adRequests.ts      # 광고 시안 API 라우트
-│       └── radioRequests.ts   # 라디오 API 라우트
-├── migrations/
-│   └── 0001_initial_schema.sql # D1 데이터베이스 스키마
-├── dist/                      # 빌드 결과물
-├── .wrangler/                 # 로컬 D1 데이터베이스
-├── seed.sql                   # 테스트 데이터
-├── ecosystem.config.cjs       # PM2 설정
-├── wrangler.jsonc            # Cloudflare 설정
-├── package.json              # 프로젝트 의존성
-└── README.md                 # 프로젝트 문서
-
-```
-
-## 기술 스택 상세
-- **Backend Framework**: Hono 4.11+ (경량 엣지 웹 프레임워크)
-- **Frontend**: Vanilla JavaScript + Tailwind CSS 3.x
-- **Database**: Cloudflare D1 (SQLite)
-- **HTTP Client**: Axios 1.6+
-- **Icons**: Font Awesome 6.4+
-- **Build Tool**: Vite 6.x
-- **Process Manager**: PM2
-- **TypeScript**: 5.x
-- **Deployment**: Cloudflare Pages + Wrangler 4.x
-
-## 라이선스
 MIT License
 
-## 기여자
-- 개발: AI Assistant
-- 기획: 팬덤 커뮤니티
+## 👥 기여
 
----
-
-**팬들을 위한, 팬들에 의한 정보 공유 서비스** 💜
+풀 리퀘스트와 이슈는 언제나 환영합니다!

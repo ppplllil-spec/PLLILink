@@ -1,9 +1,13 @@
 import { Hono } from 'hono'
-import type { Bindings } from '../types'
+import type { D1Database } from '@cloudflare/workers-types'
+
+type Bindings = {
+  DB: D1Database
+}
 
 const votes = new Hono<{ Bindings: Bindings }>()
 
-// 투표 정보 목록 조회
+// 투표 목록 조회
 votes.get('/', async (c) => {
   try {
     const { results } = await c.env.DB.prepare(`
@@ -17,25 +21,25 @@ votes.get('/', async (c) => {
   }
 })
 
-// 투표 정보 상세 조회
+// 투표 상세 조회
 votes.get('/:id', async (c) => {
   try {
     const id = c.req.param('id')
-    const { results } = await c.env.DB.prepare(`
+    const vote = await c.env.DB.prepare(`
       SELECT * FROM votes WHERE id = ?
-    `).bind(id).all()
+    `).bind(id).first()
     
-    if (results.length === 0) {
+    if (!vote) {
       return c.json({ success: false, error: 'Vote not found' }, 404)
     }
     
-    return c.json({ success: true, data: results[0] })
+    return c.json({ success: true, data: vote })
   } catch (error) {
     return c.json({ success: false, error: 'Failed to fetch vote' }, 500)
   }
 })
 
-// 투표 정보 등록
+// 투표 생성
 votes.post('/', async (c) => {
   try {
     const body = await c.req.json()
@@ -50,48 +54,49 @@ votes.post('/', async (c) => {
       VALUES (?, ?, ?, ?, ?, ?)
     `).bind(title, description || null, vote_url, deadline || null, platform || null, created_by || null).run()
     
-    return c.json({ 
-      success: true, 
-      data: { id: result.meta.last_row_id, title, description, vote_url, deadline, platform, created_by }
-    }, 201)
+    return c.json({ success: true, data: { id: result.meta.last_row_id } }, 201)
   } catch (error) {
     return c.json({ success: false, error: 'Failed to create vote' }, 500)
   }
 })
 
-// 투표 정보 수정
+// 투표 수정
 votes.put('/:id', async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
     const { title, description, vote_url, deadline, platform } = body
     
-    if (!title || !vote_url) {
-      return c.json({ success: false, error: 'Title and vote_url are required' }, 400)
-    }
-    
-    await c.env.DB.prepare(`
+    const result = await c.env.DB.prepare(`
       UPDATE votes 
       SET title = ?, description = ?, vote_url = ?, deadline = ?, platform = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).bind(title, description || null, vote_url, deadline || null, platform || null, id).run()
+    `).bind(title, description, vote_url, deadline, platform, id).run()
     
-    return c.json({ success: true, data: { id, title, description, vote_url, deadline, platform } })
+    if (result.meta.changes === 0) {
+      return c.json({ success: false, error: 'Vote not found' }, 404)
+    }
+    
+    return c.json({ success: true, message: 'Vote updated' })
   } catch (error) {
     return c.json({ success: false, error: 'Failed to update vote' }, 500)
   }
 })
 
-// 투표 정보 삭제
+// 투표 삭제
 votes.delete('/:id', async (c) => {
   try {
     const id = c.req.param('id')
     
-    await c.env.DB.prepare(`
+    const result = await c.env.DB.prepare(`
       DELETE FROM votes WHERE id = ?
     `).bind(id).run()
     
-    return c.json({ success: true, message: 'Vote deleted successfully' })
+    if (result.meta.changes === 0) {
+      return c.json({ success: false, error: 'Vote not found' }, 404)
+    }
+    
+    return c.json({ success: true, message: 'Vote deleted' })
   } catch (error) {
     return c.json({ success: false, error: 'Failed to delete vote' }, 500)
   }

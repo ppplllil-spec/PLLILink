@@ -1,5 +1,9 @@
 import { Hono } from 'hono'
-import type { Bindings } from '../types'
+import type { D1Database } from '@cloudflare/workers-types'
+
+type Bindings = {
+  DB: D1Database
+}
 
 const radioRequests = new Hono<{ Bindings: Bindings }>()
 
@@ -7,8 +11,9 @@ const radioRequests = new Hono<{ Bindings: Bindings }>()
 radioRequests.get('/', async (c) => {
   try {
     const country = c.req.query('country')
+    
     let query = 'SELECT * FROM radio_requests'
-    const params: string[] = []
+    const params = []
     
     if (country) {
       query += ' WHERE country = ?'
@@ -30,21 +35,21 @@ radioRequests.get('/', async (c) => {
 radioRequests.get('/:id', async (c) => {
   try {
     const id = c.req.param('id')
-    const { results } = await c.env.DB.prepare(`
+    const radioRequest = await c.env.DB.prepare(`
       SELECT * FROM radio_requests WHERE id = ?
-    `).bind(id).all()
+    `).bind(id).first()
     
-    if (results.length === 0) {
+    if (!radioRequest) {
       return c.json({ success: false, error: 'Radio request not found' }, 404)
     }
     
-    return c.json({ success: true, data: results[0] })
+    return c.json({ success: true, data: radioRequest })
   } catch (error) {
     return c.json({ success: false, error: 'Failed to fetch radio request' }, 500)
   }
 })
 
-// 라디오 신청 정보 등록
+// 라디오 신청 정보 생성
 radioRequests.post('/', async (c) => {
   try {
     const body = await c.req.json()
@@ -57,31 +62,9 @@ radioRequests.post('/', async (c) => {
     const result = await c.env.DB.prepare(`
       INSERT INTO radio_requests (title, station_name, program_name, request_url, request_method, country, description, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      title,
-      station_name,
-      program_name || null,
-      request_url || null,
-      request_method || null,
-      country || 'domestic',
-      description || null,
-      created_by || null
-    ).run()
+    `).bind(title, station_name, program_name || null, request_url || null, request_method || null, country || 'domestic', description || null, created_by || null).run()
     
-    return c.json({ 
-      success: true, 
-      data: { 
-        id: result.meta.last_row_id, 
-        title,
-        station_name,
-        program_name,
-        request_url,
-        request_method,
-        country: country || 'domestic',
-        description,
-        created_by
-      }
-    }, 201)
+    return c.json({ success: true, data: { id: result.meta.last_row_id } }, 201)
   } catch (error) {
     return c.json({ success: false, error: 'Failed to create radio request' }, 500)
   }
@@ -94,29 +77,17 @@ radioRequests.put('/:id', async (c) => {
     const body = await c.req.json()
     const { title, station_name, program_name, request_url, request_method, country, description } = body
     
-    if (!title || !station_name) {
-      return c.json({ success: false, error: 'Title and station_name are required' }, 400)
-    }
-    
-    await c.env.DB.prepare(`
+    const result = await c.env.DB.prepare(`
       UPDATE radio_requests 
       SET title = ?, station_name = ?, program_name = ?, request_url = ?, request_method = ?, country = ?, description = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).bind(
-      title,
-      station_name,
-      program_name || null,
-      request_url || null,
-      request_method || null,
-      country || 'domestic',
-      description || null,
-      id
-    ).run()
+    `).bind(title, station_name, program_name, request_url, request_method, country, description, id).run()
     
-    return c.json({ 
-      success: true, 
-      data: { id, title, station_name, program_name, request_url, request_method, country, description }
-    })
+    if (result.meta.changes === 0) {
+      return c.json({ success: false, error: 'Radio request not found' }, 404)
+    }
+    
+    return c.json({ success: true, message: 'Radio request updated' })
   } catch (error) {
     return c.json({ success: false, error: 'Failed to update radio request' }, 500)
   }
@@ -127,11 +98,15 @@ radioRequests.delete('/:id', async (c) => {
   try {
     const id = c.req.param('id')
     
-    await c.env.DB.prepare(`
+    const result = await c.env.DB.prepare(`
       DELETE FROM radio_requests WHERE id = ?
     `).bind(id).run()
     
-    return c.json({ success: true, message: 'Radio request deleted successfully' })
+    if (result.meta.changes === 0) {
+      return c.json({ success: false, error: 'Radio request not found' }, 404)
+    }
+    
+    return c.json({ success: true, message: 'Radio request deleted' })
   } catch (error) {
     return c.json({ success: false, error: 'Failed to delete radio request' }, 500)
   }
