@@ -870,9 +870,14 @@ async function loadRadio() {
             <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02]">
                 <div class="flex justify-between items-start mb-3">
                     <h3 class="text-xl font-bold text-cyan-300 flex-1">${escapeHtml(radio.title)}</h3>
-                    <button onclick="deleteItem('radio-requests', ${radio.id})" class="text-red-400 hover:text-red-300 transition-colors">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="editRadio(${radio.id})" class="text-cyan-400 hover:text-cyan-300 transition-colors" title="수정">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteItem('radio-requests', ${radio.id})" class="text-red-400 hover:text-red-300 transition-colors" title="삭제">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
                 <span class="badge ${radio.country === 'domestic' ? 'bg-blue-900/50 text-blue-300 border-blue-500' : 'bg-green-900/50 text-green-300 border-green-500'} mb-2">
                     ${radio.country === 'domestic' ? '국내' : '해외'}
@@ -881,12 +886,15 @@ async function loadRadio() {
                 ${radio.program_name ? `<p class="text-gray-300 mb-2">${escapeHtml(radio.program_name)}</p>` : ''}
                 ${radio.description ? `<p class="text-gray-300 mb-3">${escapeHtml(radio.description)}</p>` : ''}
                 ${radio.request_method ? `<p class="text-sm text-gray-400 mb-2"><i class="fas fa-phone mr-1 text-purple-400"></i>신청방법: ${escapeHtml(radio.request_method)}</p>` : ''}
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
                     ${radio.request_url ? `<a href="${escapeHtml(radio.request_url)}" target="_blank" class="flex-1 cyber-link text-white text-center py-3 px-4 rounded-lg hover:shadow-lg transition-all font-bold">
                         <i class="fas fa-external-link-alt mr-2"></i>신청하러 가기
                     </a>` : ''}
-                    ${radio.country === 'international' ? `<button onclick="showRadioTemplate('${escapeHtml(radio.station_name)}')" class="px-4 py-3 rounded-lg font-bold border-2 border-purple-500 text-purple-300 hover:bg-purple-900/30 transition-all">
-                        <i class="fas fa-comment-dots mr-1"></i>예시문
+                    ${radio.example_text ? `<button onclick="showExampleText(${radio.id}, '${escapeHtml(radio.station_name)}', \`${escapeHtml(radio.example_text).replace(/`/g, '\\`')}\`)" class="px-4 py-3 rounded-lg font-bold border-2 border-green-500 text-green-300 hover:bg-green-900/30 transition-all whitespace-nowrap">
+                        <i class="fas fa-file-alt mr-1"></i>예시문 보기
+                    </button>` : ''}
+                    ${radio.country === 'international' && !radio.example_text ? `<button onclick="showRadioTemplate('${escapeHtml(radio.station_name)}')" class="px-4 py-3 rounded-lg font-bold border-2 border-purple-500 text-purple-300 hover:bg-purple-900/30 transition-all whitespace-nowrap">
+                        <i class="fas fa-comment-dots mr-1"></i>템플릿 예시문
                     </button>` : ''}
                 </div>
             </div>
@@ -1116,6 +1124,15 @@ function openAddModal() {
             </div>
             <div>
                 <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3"></textarea>
+            </div>
+            <div>
+                <label class="block text-cyan-300 font-semibold mb-2">
+                    <i class="fas fa-file-alt mr-2"></i>예시문 (선택)
+                </label>
+                <textarea name="example_text" placeholder="라디오 신청 예시문을 입력하세요..." class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="5"></textarea>
+                <p class="text-xs text-gray-500 mt-1">
+                    <i class="fas fa-info-circle mr-1 text-cyan-400"></i>라디오 신청 시 사용할 예시문을 작성하세요
+                </p>
             </div>
             <div>
                 <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
@@ -1404,6 +1421,189 @@ function attachUrlAutoFill() {
 }
 
 // 라디오 예시문 표시
+// 예시문 보기 함수
+function showExampleText(radioId, stationName, exampleText) {
+    const modal = document.createElement('div');
+    modal.id = 'example-text-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50';
+    modal.style.backdropFilter = 'blur(10px)';
+    
+    modal.innerHTML = `
+        <div class="card rounded-2xl shadow-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto border-2">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-black neon-text">
+                    <i class="fas fa-file-alt mr-2"></i>${escapeHtml(stationName)} 신청 예시문
+                </h2>
+                <button onclick="closeExampleTextModal()" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                    <i class="fas fa-times text-3xl"></i>
+                </button>
+            </div>
+            
+            <div class="card rounded-xl p-5 border border-cyan-900/50 mb-4">
+                <div class="bg-gray-900/50 rounded-lg p-4 mb-4">
+                    <pre class="text-gray-300 whitespace-pre-wrap font-mono text-sm">${escapeHtml(exampleText)}</pre>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button onclick="copyExampleText(\`${escapeHtml(exampleText).replace(/`/g, '\\`')}\`)" class="flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-3 px-6 rounded-lg hover:from-green-500 hover:to-green-600 transition-all shadow-lg">
+                        <i class="fas fa-copy mr-2"></i>예시문 복사
+                    </button>
+                    <button onclick="closeExampleTextModal()" class="px-8 py-3 rounded-lg font-bold border-2 border-gray-600 text-gray-300 hover:bg-gray-800/50 transition-all">
+                        닫기
+                    </button>
+                </div>
+            </div>
+            
+            <div class="text-center text-sm text-gray-400 mt-4">
+                <i class="fas fa-info-circle mr-1"></i>
+                위 예시문을 복사하여 라디오 신청 시 활용하세요
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// 예시문 복사 함수
+function copyExampleText(text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                showToast('📝 예시문이 복사되었습니다!', 'success');
+            })
+            .catch(err => {
+                showToast('복사에 실패했습니다', 'error');
+                console.error('복사 실패:', err);
+            });
+    } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showToast('📝 예시문이 복사되었습니다!', 'success');
+        } catch (err) {
+            showToast('복사에 실패했습니다', 'error');
+        }
+        document.body.removeChild(textArea);
+    }
+}
+
+// 예시문 모달 닫기
+function closeExampleTextModal() {
+    const modal = document.getElementById('example-text-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 라디오 수정 함수
+async function editRadio(radioId) {
+    try {
+        // 라디오 정보 가져오기
+        const response = await axios.get(`/api/radio-requests/${radioId}`);
+        const radio = response.data.data;
+        
+        // 모달 생성
+        const modal = document.createElement('div');
+        modal.id = 'edit-radio-modal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50';
+        modal.style.backdropFilter = 'blur(10px)';
+        
+        modal.innerHTML = `
+            <div class="card rounded-2xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-black neon-text">라디오 정보 수정</h2>
+                    <button onclick="closeEditRadioModal()" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                        <i class="fas fa-times text-3xl"></i>
+                    </button>
+                </div>
+                <form id="edit-radio-form" class="space-y-4">
+                    <div>
+                        <input type="text" name="title" value="${escapeHtml(radio.title)}" placeholder="제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    </div>
+                    <div>
+                        <input type="text" name="station_name" value="${escapeHtml(radio.station_name)}" placeholder="방송국 이름" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    </div>
+                    <div>
+                        <input type="text" name="program_name" value="${escapeHtml(radio.program_name || '')}" placeholder="프로그램 이름 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    </div>
+                    <div>
+                        <input type="url" name="request_url" value="${escapeHtml(radio.request_url || '')}" placeholder="신청 URL" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    </div>
+                    <div>
+                        <input type="text" name="request_method" value="${escapeHtml(radio.request_method || '')}" placeholder="신청 방법 (예: 앱, 문자)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    </div>
+                    <div>
+                        <select name="country" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                            <option value="domestic" ${radio.country === 'domestic' ? 'selected' : ''}>국내</option>
+                            <option value="international" ${radio.country === 'international' ? 'selected' : ''}>해외</option>
+                        </select>
+                    </div>
+                    <div>
+                        <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3">${escapeHtml(radio.description || '')}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-cyan-300 font-semibold mb-2">
+                            <i class="fas fa-file-alt mr-2"></i>예시문 (선택)
+                        </label>
+                        <textarea name="example_text" placeholder="라디오 신청 예시문을 입력하세요..." class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="5">${escapeHtml(radio.example_text || '')}</textarea>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <i class="fas fa-info-circle mr-1 text-cyan-400"></i>라디오 신청 시 사용할 예시문을 작성하세요
+                        </p>
+                    </div>
+                    <div class="flex gap-3 pt-6 border-t border-cyan-900/30">
+                        <button type="submit" class="flex-1 neon-button text-white px-6 py-3 rounded-xl font-black">
+                            <i class="fas fa-save mr-2"></i>저장
+                        </button>
+                        <button type="button" onclick="closeEditRadioModal()" class="px-8 py-3 rounded-xl font-bold border-2 border-gray-600 text-gray-300 hover:bg-gray-800/50 transition-all">
+                            취소
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // 폼 제출 이벤트
+        document.getElementById('edit-radio-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {};
+            
+            for (const [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            try {
+                await axios.put(`/api/radio-requests/${radioId}`, data);
+                showToast('✅ 라디오 정보가 수정되었습니다!', 'success');
+                closeEditRadioModal();
+                loadRadio();
+            } catch (error) {
+                showToast(`수정 실패: ${error.response?.data?.error || error.message}`, 'error');
+            }
+        });
+        
+    } catch (error) {
+        showToast('라디오 정보를 불러오는데 실패했습니다', 'error');
+        console.error('라디오 정보 로드 실패:', error);
+    }
+}
+
+// 라디오 수정 모달 닫기
+function closeEditRadioModal() {
+    const modal = document.getElementById('edit-radio-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 라디오 템플릿 예시문 보기
 async function showRadioTemplate(stationName) {
     try {
         const response = await axios.get(`/api/radio-templates/station/${encodeURIComponent(stationName)}`);

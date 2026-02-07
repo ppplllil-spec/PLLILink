@@ -53,16 +53,16 @@ radioRequests.get('/:id', async (c) => {
 radioRequests.post('/', async (c) => {
   try {
     const body = await c.req.json()
-    const { title, station_name, program_name, request_url, request_method, country, description, created_by } = body
+    const { title, station_name, program_name, request_url, request_method, country, description, example_text, created_by } = body
     
     if (!title || !station_name) {
       return c.json({ success: false, error: 'Title and station_name are required' }, 400)
     }
     
     const result = await c.env.DB.prepare(`
-      INSERT INTO radio_requests (title, station_name, program_name, request_url, request_method, country, description, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(title, station_name, program_name || null, request_url || null, request_method || null, country || 'domestic', description || null, created_by || null).run()
+      INSERT INTO radio_requests (title, station_name, program_name, request_url, request_method, country, description, example_text, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(title, station_name, program_name || null, request_url || null, request_method || null, country || 'domestic', description || null, example_text || null, created_by || null).run()
     
     return c.json({ success: true, data: { id: result.meta.last_row_id } }, 201)
   } catch (error) {
@@ -75,13 +75,13 @@ radioRequests.put('/:id', async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { title, station_name, program_name, request_url, request_method, country, description } = body
+    const { title, station_name, program_name, request_url, request_method, country, description, example_text } = body
     
     const result = await c.env.DB.prepare(`
       UPDATE radio_requests 
-      SET title = ?, station_name = ?, program_name = ?, request_url = ?, request_method = ?, country = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+      SET title = ?, station_name = ?, program_name = ?, request_url = ?, request_method = ?, country = ?, description = ?, example_text = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).bind(title, station_name, program_name, request_url, request_method, country, description, id).run()
+    `).bind(title, station_name, program_name, request_url, request_method, country, description, example_text, id).run()
     
     if (result.meta.changes === 0) {
       return c.json({ success: false, error: 'Radio request not found' }, 404)
