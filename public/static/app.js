@@ -1,10 +1,11 @@
 // 전역 상태
-let currentTab = 'votes';
+let currentTab = 'schedule'; // 기본 탭을 일정으로 변경
 let radioFilter = 'all';
 let isAutoFilling = false;
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
+    loadSchedule();
     loadVotes();
     loadAds();
     loadRadio();
@@ -38,6 +39,104 @@ function filterRadio(filter) {
     radioFilter = filter;
     loadRadio();
 }
+
+// 오늘의 일정 로드
+async function loadSchedule() {
+    try {
+        const response = await axios.get('/api/schedule/today');
+        const schedule = response.data.data;
+        
+        // 날짜 표시
+        const dateEl = document.getElementById('today-date');
+        if (dateEl) {
+            const date = new Date(schedule.date);
+            dateEl.textContent = `${date.getMonth() + 1}월 ${date.getDate()}일 ${['일','월','화','수','목','금','토'][date.getDay()]}요일`;
+        }
+        
+        // 오늘 마감 투표
+        const deadlineVotesEl = document.getElementById('today-deadline-votes');
+        if (deadlineVotesEl) {
+            if (schedule.votes.deadline.length === 0) {
+                deadlineVotesEl.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">오늘 마감인 투표가 없습니다</div>';
+            } else {
+                deadlineVotesEl.innerHTML = schedule.votes.deadline.map(vote => `
+                    <div class="card rounded-xl shadow-lg p-5 border-2 border-red-500/50">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="badge bg-red-900/50 text-red-300 border-red-500">⏰ 마감 임박</span>
+                            ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500">${escapeHtml(vote.platform)}</span>` : ''}
+                        </div>
+                        <h4 class="text-lg font-bold text-cyan-300 mb-2">${escapeHtml(vote.title)}</h4>
+                        ${vote.description ? `<p class="text-gray-300 text-sm mb-3">${escapeHtml(vote.description)}</p>` : ''}
+                        <p class="text-sm text-red-400 mb-2">
+                            <i class="far fa-clock mr-1"></i>
+                            마감: ${new Date(vote.deadline).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}
+                        </p>
+                        <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all font-bold text-sm">
+                            <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
+                        </a>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // 매일 반복 투표
+        const recurringVotesEl = document.getElementById('today-recurring-votes');
+        if (recurringVotesEl) {
+            if (schedule.votes.recurring.length === 0) {
+                recurringVotesEl.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">오늘 반복 투표가 없습니다</div>';
+            } else {
+                recurringVotesEl.innerHTML = schedule.votes.recurring.map(vote => `
+                    <div class="card rounded-xl shadow-lg p-5">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="badge bg-purple-900/50 text-purple-300 border-purple-500"><i class="fas fa-sync-alt mr-1"></i>반복</span>
+                            ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500">${escapeHtml(vote.platform)}</span>` : ''}
+                        </div>
+                        <h4 class="text-lg font-bold text-cyan-300 mb-2">${escapeHtml(vote.title)}</h4>
+                        ${vote.description ? `<p class="text-gray-300 text-sm mb-3">${escapeHtml(vote.description)}</p>` : ''}
+                        ${vote.recurrence_time ? `<p class="text-sm text-purple-400 mb-2"><i class="far fa-clock mr-1"></i>매일 ${vote.recurrence_time}</p>` : ''}
+                        <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all font-bold text-sm">
+                            <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
+                        </a>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // 오늘 라디오 요청
+        const todayRadioEl = document.getElementById('today-radio');
+        if (todayRadioEl) {
+            const allRadio = [...schedule.radio.specific, ...schedule.radio.recurring];
+            if (allRadio.length === 0) {
+                todayRadioEl.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">오늘 라디오 요청이 없습니다</div>';
+            } else {
+                todayRadioEl.innerHTML = allRadio.map(radio => `
+                    <div class="card rounded-xl shadow-lg p-5">
+                        <div class="flex items-center gap-2 mb-2">
+                            ${radio.schedule_type === 'recurring' ? 
+                                '<span class="badge bg-purple-900/50 text-purple-300 border-purple-500"><i class="fas fa-sync-alt mr-1"></i>반복</span>' :
+                                '<span class="badge bg-green-900/50 text-green-300 border-green-500"><i class="fas fa-calendar-day mr-1"></i>특정일</span>'
+                            }
+                            <span class="badge ${radio.country === 'domestic' ? 'bg-blue-900/50 text-blue-300 border-blue-500' : 'bg-green-900/50 text-green-300 border-green-500'}">
+                                ${radio.country === 'domestic' ? '국내' : '해외'}
+                            </span>
+                        </div>
+                        <h4 class="text-lg font-bold text-cyan-400 mb-1">${escapeHtml(radio.station_name)}</h4>
+                        ${radio.program_name ? `<p class="text-gray-300 text-sm mb-2">${escapeHtml(radio.program_name)}</p>` : ''}
+                        ${radio.request_time ? `<p class="text-sm text-green-400 mb-2"><i class="far fa-clock mr-1"></i>${radio.request_time}</p>` : ''}
+                        ${radio.description ? `<p class="text-gray-400 text-xs mb-3">${escapeHtml(radio.description)}</p>` : ''}
+                        ${radio.request_url ? `<a href="${escapeHtml(radio.request_url)}" target="_blank" class="block cyber-link text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all font-bold text-sm">
+                            <i class="fas fa-external-link-alt mr-2"></i>신청하러 가기
+                        </a>` : ''}
+                    </div>
+                `).join('');
+            }
+        }
+        
+    } catch (error) {
+        console.error('일정 로드 실패:', error);
+    }
+}
+
 
 // 투표 목록 로드
 async function loadVotes() {
@@ -232,7 +331,7 @@ function openAddModal() {
     
     let fields = '';
     
-    if (currentTab === 'votes') {
+    if (currentTab === 'votes' || currentTab === 'schedule') {
         fields = `
             <div>
                 <input type="text" name="title" placeholder="투표 제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
@@ -248,7 +347,54 @@ function openAddModal() {
                 <input type="text" name="platform" placeholder="플랫폼 (예: Twitter, Mnet)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
             </div>
             <div>
-                <input type="datetime-local" name="deadline" placeholder="마감일시" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                <input type="datetime-local" name="deadline" placeholder="마감일시 (일회성 투표)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            </div>
+            <div class="border-t border-cyan-900/30 pt-4 mt-2">
+                <label class="flex items-center gap-2 text-cyan-300 mb-3">
+                    <input type="checkbox" id="is_recurring" name="is_recurring" value="1" class="w-4 h-4" onchange="toggleRecurringFields()">
+                    <i class="fas fa-sync-alt"></i>
+                    <span class="font-bold">매일 반복 투표 설정</span>
+                </label>
+                <div id="recurring-fields" class="hidden space-y-3">
+                    <div>
+                        <label class="text-sm text-gray-400 mb-1 block">투표 시간</label>
+                        <input type="time" name="recurrence_time" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400 mb-2 block">반복 요일 (선택)</label>
+                        <div class="grid grid-cols-7 gap-2">
+                            <label class="flex flex-col items-center gap-1">
+                                <input type="checkbox" name="recurrence_days[]" value="mon" class="w-4 h-4">
+                                <span class="text-xs text-gray-400">월</span>
+                            </label>
+                            <label class="flex flex-col items-center gap-1">
+                                <input type="checkbox" name="recurrence_days[]" value="tue" class="w-4 h-4">
+                                <span class="text-xs text-gray-400">화</span>
+                            </label>
+                            <label class="flex flex-col items-center gap-1">
+                                <input type="checkbox" name="recurrence_days[]" value="wed" class="w-4 h-4">
+                                <span class="text-xs text-gray-400">수</span>
+                            </label>
+                            <label class="flex flex-col items-center gap-1">
+                                <input type="checkbox" name="recurrence_days[]" value="thu" class="w-4 h-4">
+                                <span class="text-xs text-gray-400">목</span>
+                            </label>
+                            <label class="flex flex-col items-center gap-1">
+                                <input type="checkbox" name="recurrence_days[]" value="fri" class="w-4 h-4">
+                                <span class="text-xs text-gray-400">금</span>
+                            </label>
+                            <label class="flex flex-col items-center gap-1">
+                                <input type="checkbox" name="recurrence_days[]" value="sat" class="w-4 h-4">
+                                <span class="text-xs text-gray-400">토</span>
+                            </label>
+                            <label class="flex flex-col items-center gap-1">
+                                <input type="checkbox" name="recurrence_days[]" value="sun" class="w-4 h-4">
+                                <span class="text-xs text-gray-400">일</span>
+                            </label>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">* 선택 안하면 매일 반복됩니다</p>
+                    </div>
+                </div>
             </div>
             <div>
                 <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
@@ -328,11 +474,29 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
+    const data = {};
+    
+    // 일반 필드 처리
+    for (const [key, value] of formData.entries()) {
+        if (key === 'recurrence_days[]') continue; // 따로 처리
+        data[key] = value;
+    }
+    
+    // 반복 요일 처리
+    const recurrenceDays = formData.getAll('recurrence_days[]');
+    if (recurrenceDays.length > 0) {
+        data.recurrence_days = JSON.stringify(recurrenceDays);
+        data.recurrence_type = 'weekly';
+    } else if (data.is_recurring) {
+        data.recurrence_type = 'daily';
+    }
+    
+    // is_recurring 체크박스 처리
+    data.is_recurring = data.is_recurring ? 1 : 0;
     
     try {
         let endpoint = '';
-        if (currentTab === 'votes') endpoint = '/api/votes';
+        if (currentTab === 'votes' || currentTab === 'schedule') endpoint = '/api/votes';
         else if (currentTab === 'ads') endpoint = '/api/ad-requests';
         else if (currentTab === 'radio') endpoint = '/api/radio-requests';
         else if (currentTab === 'tips') endpoint = '/api/tips';
@@ -343,6 +507,7 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
         
         // 해당 탭의 데이터 새로고침
         if (currentTab === 'votes') loadVotes();
+        else if (currentTab === 'schedule') loadSchedule();
         else if (currentTab === 'ads') loadAds();
         else if (currentTab === 'radio') loadRadio();
         else if (currentTab === 'tips') loadTips();
@@ -379,6 +544,20 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// 반복 필드 토글
+function toggleRecurringFields() {
+    const checkbox = document.getElementById('is_recurring');
+    const fields = document.getElementById('recurring-fields');
+    if (checkbox && fields) {
+        if (checkbox.checked) {
+            fields.classList.remove('hidden');
+        } else {
+            fields.classList.add('hidden');
+        }
+    }
+}
+
 
 // URL 메타데이터 자동 추출
 async function fetchUrlMetadata(url) {

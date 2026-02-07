@@ -8,6 +8,7 @@ import adRequests from './routes/adRequests'
 import radioRequests from './routes/radioRequests'
 import tips from './routes/tips'
 import utils from './routes/utils'
+import schedule from './routes/schedule'
 
 type Bindings = {
   DB: D1Database
@@ -27,6 +28,7 @@ app.route('/api/ad-requests', adRequests)
 app.route('/api/radio-requests', radioRequests)
 app.route('/api/tips', tips)
 app.route('/api/utils', utils)
+app.route('/api/schedule', schedule)
 
 // 메인 페이지
 app.get('/', (c) => {
@@ -188,7 +190,10 @@ app.get('/', (c) => {
             <!-- 탭 메뉴 -->
             <div class="card rounded-2xl shadow-2xl p-3 mb-6">
                 <div class="flex flex-wrap gap-3">
-                    <button onclick="switchTab('votes')" id="tab-votes" class="tab-active flex-1 min-w-[120px] py-3 px-4 rounded-xl font-bold transition-all text-cyan-300 border border-cyan-800/30 hover:border-cyan-500/50">
+                    <button onclick="switchTab('schedule')" id="tab-schedule" class="flex-1 min-w-[120px] py-3 px-4 rounded-xl font-bold transition-all text-gray-300 border border-cyan-800/30 hover:border-cyan-500/50 hover:bg-cyan-900/20">
+                        <i class="fas fa-calendar-alt mr-2"></i>오늘 일정
+                    </button>
+                    <button onclick="switchTab('votes')" id="tab-votes" class="flex-1 min-w-[120px] py-3 px-4 rounded-xl font-bold transition-all text-gray-300 border border-cyan-800/30 hover:border-cyan-500/50 hover:bg-cyan-900/20">
                         <i class="fas fa-vote-yea mr-2"></i>투표
                     </button>
                     <button onclick="switchTab('ads')" id="tab-ads" class="flex-1 min-w-[120px] py-3 px-4 rounded-xl font-bold transition-all text-gray-300 border border-cyan-800/30 hover:border-cyan-500/50 hover:bg-cyan-900/20">
@@ -213,6 +218,49 @@ app.get('/', (c) => {
 
         <!-- 콘텐츠 영역 -->
         <div class="max-w-7xl mx-auto">
+            <!-- 오늘 일정 섹션 -->
+            <div id="content-schedule" class="content-section">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-black neon-text mb-4">
+                        <i class="fas fa-calendar-day mr-2"></i>오늘의 일정
+                        <span id="today-date" class="text-lg text-gray-400 ml-3"></span>
+                    </h2>
+                    
+                    <!-- 오늘 마감 투표 -->
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                            <i class="fas fa-hourglass-end"></i>
+                            오늘 마감 투표
+                        </h3>
+                        <div id="today-deadline-votes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- 동적 생성 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 매일 반복 투표 -->
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold text-purple-400 mb-3 flex items-center gap-2">
+                            <i class="fas fa-sync-alt"></i>
+                            매일 반복 투표
+                        </h3>
+                        <div id="today-recurring-votes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- 동적 생성 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 오늘 라디오 요청 -->
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold text-green-400 mb-3 flex items-center gap-2">
+                            <i class="fas fa-broadcast-tower"></i>
+                            오늘 라디오 요청
+                        </h3>
+                        <div id="today-radio" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- 동적 생성 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 투표 섹션 -->
             <div id="content-votes" class="content-section">
                 <div id="votes-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
