@@ -371,6 +371,9 @@ app.get('/', (c) => {
 
             <!-- 투표 섹션 -->
             <div id="content-votes" class="content-section">
+                <!-- 완료율 표시 -->
+                <div id="completion-stats" class="mb-6"></div>
+                
                 <div id="votes-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <!-- 로딩 중... -->
                 </div>

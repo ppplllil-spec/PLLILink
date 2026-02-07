@@ -112,6 +112,110 @@ function startCountdownUpdates() {
     }, 1000);
 }
 
+// 투표 완료 체크박스 관련 함수
+function getCompletedVotes() {
+    const today = new Date().toISOString().split('T')[0];
+    const stored = localStorage.getItem('completed_votes');
+    
+    if (!stored) return { date: today, votes: [] };
+    
+    try {
+        const data = JSON.parse(stored);
+        // 날짜가 다르면 리셋
+        if (data.date !== today) {
+            return { date: today, votes: [] };
+        }
+        return data;
+    } catch (e) {
+        return { date: today, votes: [] };
+    }
+}
+
+function saveCompletedVotes(votes) {
+    const today = new Date().toISOString().split('T')[0];
+    localStorage.setItem('completed_votes', JSON.stringify({
+        date: today,
+        votes: votes
+    }));
+}
+
+function isVoteCompleted(voteId) {
+    const data = getCompletedVotes();
+    return data.votes.includes(voteId);
+}
+
+function toggleVoteComplete(voteId) {
+    const data = getCompletedVotes();
+    const index = data.votes.indexOf(voteId);
+    
+    if (index > -1) {
+        // 이미 완료된 경우 제거
+        data.votes.splice(index, 1);
+    } else {
+        // 완료 추가
+        data.votes.push(voteId);
+    }
+    
+    saveCompletedVotes(data.votes);
+    
+    // UI 업데이트
+    updateVoteCheckbox(voteId, index === -1);
+    updateCompletionStats();
+    
+    // 토스트 알림
+    if (index === -1) {
+        showToast('✅ 투표 완료 처리되었습니다!', 'success');
+    } else {
+        showToast('투표 완료가 취소되었습니다.', 'info');
+    }
+}
+
+function updateVoteCheckbox(voteId, isCompleted) {
+    const checkbox = document.querySelector(`[data-vote-checkbox="${voteId}"]`);
+    if (checkbox) {
+        checkbox.checked = isCompleted;
+        
+        // 카드 스타일 업데이트
+        const card = checkbox.closest('.card');
+        if (card) {
+            if (isCompleted) {
+                card.classList.add('opacity-60', 'grayscale');
+            } else {
+                card.classList.remove('opacity-60', 'grayscale');
+            }
+        }
+    }
+}
+
+function updateCompletionStats() {
+    const statsEl = document.getElementById('completion-stats');
+    if (!statsEl) return;
+    
+    const data = getCompletedVotes();
+    const totalVotes = document.querySelectorAll('[data-vote-checkbox]').length;
+    const completed = data.votes.length;
+    
+    if (totalVotes === 0) {
+        statsEl.innerHTML = '';
+        return;
+    }
+    
+    const percentage = Math.round((completed / totalVotes) * 100);
+    
+    statsEl.innerHTML = `
+        <div class="bg-gradient-to-r from-cyan-900/30 to-purple-900/30 rounded-lg p-4 border border-cyan-500/30">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-cyan-300 font-bold">오늘의 투표 진행률</span>
+                <span class="text-2xl font-bold text-cyan-300">${completed}/${totalVotes}</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div class="bg-gradient-to-r from-cyan-500 to-purple-500 h-full transition-all duration-500" style="width: ${percentage}%"></div>
+            </div>
+            <p class="text-sm text-gray-400 mt-2">🎯 ${percentage}% 완료!</p>
+        </div>
+    `;
+}
+
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
     loadSchedule();
@@ -171,22 +275,38 @@ async function loadSchedule() {
             if (schedule.votes.deadline.length === 0) {
                 deadlineVotesEl.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">오늘 마감인 투표가 없습니다</div>';
             } else {
-                deadlineVotesEl.innerHTML = schedule.votes.deadline.map(vote => `
-                    <div class="card rounded-xl shadow-lg p-5 border-2 border-red-500/50">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="badge bg-red-900/50 text-red-300 border-red-500">⏰ 마감 임박</span>
-                            ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500">${escapeHtml(vote.platform)}</span>` : ''}
+                deadlineVotesEl.innerHTML = schedule.votes.deadline.map(vote => {
+                    const isCompleted = isVoteCompleted(vote.id);
+                    const cardOpacity = isCompleted ? 'opacity-60 grayscale' : '';
+                    
+                    return `
+                    <div class="card rounded-xl shadow-lg p-5 border-2 border-red-500/50 ${cardOpacity}">
+                        <div class="flex items-start gap-3 mb-2">
+                            <label class="flex items-center cursor-pointer mt-1">
+                                <input type="checkbox" 
+                                       data-vote-checkbox="${vote.id}"
+                                       ${isCompleted ? 'checked' : ''}
+                                       onchange="toggleVoteComplete(${vote.id})"
+                                       class="w-5 h-5 rounded border-2 border-red-500 bg-gray-800 checked:bg-red-500 checked:border-red-500 cursor-pointer transition-all">
+                            </label>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="badge bg-red-900/50 text-red-300 border-red-500">⏰ 마감 임박</span>
+                                    ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500">${escapeHtml(vote.platform)}</span>` : ''}
+                                </div>
+                                <h4 class="text-lg font-bold text-cyan-300 mb-2 ${isCompleted ? 'line-through' : ''}">${escapeHtml(vote.title)}</h4>
+                                ${vote.description ? `<p class="text-gray-300 text-sm mb-3">${escapeHtml(vote.description)}</p>` : ''}
+                                <div class="mb-3" data-deadline="${vote.deadline}">
+                                    ${getCountdownHTML(vote.deadline)}
+                                </div>
+                                <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all font-bold text-sm">
+                                    <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
+                                </a>
+                            </div>
                         </div>
-                        <h4 class="text-lg font-bold text-cyan-300 mb-2">${escapeHtml(vote.title)}</h4>
-                        ${vote.description ? `<p class="text-gray-300 text-sm mb-3">${escapeHtml(vote.description)}</p>` : ''}
-                        <div class="mb-3" data-deadline="${vote.deadline}">
-                            ${getCountdownHTML(vote.deadline)}
-                        </div>
-                        <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all font-bold text-sm">
-                            <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
-                        </a>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         }
         
@@ -300,10 +420,23 @@ async function loadVotes() {
         const votes = response.data.data;
         
         const votesList = document.getElementById('votes-list');
-        votesList.innerHTML = votes.map(vote => `
-            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02]">
+        votesList.innerHTML = votes.map(vote => {
+            const isCompleted = isVoteCompleted(vote.id);
+            const cardOpacity = isCompleted ? 'opacity-60 grayscale' : '';
+            
+            return `
+            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02] ${cardOpacity}">
                 <div class="flex justify-between items-start mb-3">
-                    <h3 class="text-xl font-bold text-cyan-300 flex-1">${escapeHtml(vote.title)}</h3>
+                    <div class="flex items-start gap-3 flex-1">
+                        <label class="flex items-center cursor-pointer group">
+                            <input type="checkbox" 
+                                   data-vote-checkbox="${vote.id}"
+                                   ${isCompleted ? 'checked' : ''}
+                                   onchange="toggleVoteComplete(${vote.id})"
+                                   class="w-6 h-6 rounded border-2 border-cyan-500 bg-gray-800 checked:bg-cyan-500 checked:border-cyan-500 cursor-pointer transition-all">
+                        </label>
+                        <h3 class="text-xl font-bold text-cyan-300 flex-1 ${isCompleted ? 'line-through' : ''}">${escapeHtml(vote.title)}</h3>
+                    </div>
                     <div class="flex gap-2">
                         <button onclick="copyLink('${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="text-green-400 hover:text-green-300 transition-colors" title="링크 복사">
                             <i class="fas fa-copy"></i>
@@ -326,7 +459,11 @@ async function loadVotes() {
                     <i class="fas fa-lightbulb mr-1"></i>이 투표의 팁 보기
                 </button>
             </div>
-        `).join('') || '<div class="col-span-full text-center text-gray-400 py-8 font-bold">등록된 투표가 없습니다.</div>';
+            `;
+        }).join('') || '<div class="col-span-full text-center text-gray-400 py-8 font-bold">등록된 투표가 없습니다.</div>';
+        
+        // 완료율 업데이트
+        updateCompletionStats();
     } catch (error) {
         console.error('투표 로드 실패:', error);
     }
