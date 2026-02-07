@@ -149,10 +149,11 @@ app.get('/', (c) => {
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+        <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
         <style>
           * {
-            font-family: 'Orbitron', 'Noto Sans KR', sans-serif;
+            font-family: 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
           }
           
           body {
@@ -218,7 +219,7 @@ app.get('/', (c) => {
             font-size: 0.75rem;
             font-weight: 600;
             border: 1px solid currentColor;
-            text-shadow: 0 0 10px currentColor;
+            text-shadow: 0 0 8px currentColor;
           }
           
           .tab-active {
@@ -253,9 +254,10 @@ app.get('/', (c) => {
           
           .neon-text {
             color: #00bfff;
-            text-shadow: 0 0 10px rgba(0, 191, 255, 0.8), 0 0 20px rgba(0, 191, 255, 0.5);
+            text-shadow: 0 0 10px rgba(0, 191, 255, 0.6), 0 0 20px rgba(0, 191, 255, 0.3);
             font-weight: 900;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.02em;
+            font-family: 'Inter', 'Pretendard', sans-serif;
           }
           
           .cyber-link {
