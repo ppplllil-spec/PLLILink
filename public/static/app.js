@@ -5,6 +5,7 @@ let isAutoFilling = false;
 let allVotes = []; // 전체 투표 데이터 저장
 let currentVoteFilter = 'all';
 let currentSearchQuery = '';
+let modalEventListeners = []; // 모달 이벤트 리스너 관리
 
 // 토스트 알림 시스템
 function showToast(message, type = 'success') {
@@ -263,7 +264,6 @@ function renderFilteredVotes() {
                         <input type="checkbox" 
                                data-vote-checkbox="${vote.id}"
                                ${isCompleted ? 'checked' : ''}
-                               onchange="toggleVoteComplete(${vote.id})"
                                class="w-6 h-6 rounded border-2 border-cyan-500 bg-gray-800 checked:bg-cyan-500 checked:border-cyan-500 cursor-pointer transition-all">
                     </label>
                     <h3 class="text-xl font-bold text-cyan-300 flex-1 ${isCompleted ? 'line-through' : ''}">${escapeHtml(vote.title)}</h3>
@@ -274,27 +274,27 @@ function renderFilteredVotes() {
                             <i class="fas fa-share-alt"></i>
                         </button>
                         <div class="hidden group-hover:block absolute right-0 top-8 bg-gray-800 rounded-lg shadow-xl p-2 z-10 min-w-[140px]">
-                            <button onclick="shareToSNS('twitter', '${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
+                            <button data-action="share" data-platform="twitter" data-url="${escapeHtml(vote.vote_url)}" data-title="${escapeHtml(vote.title)}" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
                                 <i class="fab fa-twitter text-blue-400"></i> Twitter
                             </button>
-                            <button onclick="shareToSNS('facebook', '${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
+                            <button data-action="share" data-platform="facebook" data-url="${escapeHtml(vote.vote_url)}" data-title="${escapeHtml(vote.title)}" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
                                 <i class="fab fa-facebook text-blue-600"></i> Facebook
                             </button>
-                            <button onclick="shareToSNS('kakao', '${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
+                            <button data-action="share" data-platform="kakao" data-url="${escapeHtml(vote.vote_url)}" data-title="${escapeHtml(vote.title)}" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
                                 <i class="fas fa-comment text-yellow-400"></i> KakaoTalk
                             </button>
-                            <button onclick="shareToSNS('line', '${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
+                            <button data-action="share" data-platform="line" data-url="${escapeHtml(vote.vote_url)}" data-title="${escapeHtml(vote.title)}" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
                                 <i class="fab fa-line text-green-500"></i> LINE
                             </button>
                         </div>
                     </div>
-                    <button onclick="copyLink('${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="text-green-400 hover:text-green-300 transition-colors" title="링크 복사">
+                    <button data-action="copy-link" data-url="${escapeHtml(vote.vote_url)}" data-title="${escapeHtml(vote.title)}" class="text-green-400 hover:text-green-300 transition-colors" title="링크 복사">
                         <i class="fas fa-copy"></i>
                     </button>
-                    <button onclick="editItem('votes', ${vote.id})" class="text-cyan-400 hover:text-cyan-300 transition-colors" title="수정">
+                    <button data-action="edit" data-type="votes" data-id="${vote.id}" class="text-cyan-400 hover:text-cyan-300 transition-colors" title="수정">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="deleteItem('votes', ${vote.id})" class="text-red-400 hover:text-red-300 transition-colors" title="삭제">
+                    <button data-action="delete" data-type="votes" data-id="${vote.id}" class="text-red-400 hover:text-red-300 transition-colors" title="삭제">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -305,7 +305,7 @@ function renderFilteredVotes() {
             <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-3 px-4 rounded-lg hover:shadow-lg transition-all mb-2 font-bold">
                 <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
             </a>
-            <button onclick="viewTips(${vote.id}, '${escapeHtml(vote.platform || 'General')}')" class="mt-3 text-sm text-purple-400 hover:text-purple-300 font-semibold transition-colors">
+            <button data-action="view-tips" data-id="${vote.id}" data-platform="${escapeHtml(vote.platform || 'General')}" class="mt-3 text-sm text-purple-400 hover:text-purple-300 font-semibold transition-colors">
                 <i class="fas fa-lightbulb mr-1"></i>이 투표의 팁 보기
             </button>
         </div>
@@ -629,7 +629,71 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFilteredVotes();
         });
     }
+    
+    // 이벤트 위임 설정
+    setupEventDelegation();
 });
+
+// 이벤트 위임 설정
+function setupEventDelegation() {
+    document.body.addEventListener('click', handleClick);
+    document.body.addEventListener('change', handleChange);
+}
+
+// 클릭 이벤트 처리
+function handleClick(e) {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    
+    e.preventDefault();
+    
+    const action = target.dataset.action;
+    const id = target.dataset.id ? parseInt(target.dataset.id) : null;
+    const type = target.dataset.type;
+    
+    switch(action) {
+        case 'copy-link':
+            copyLink(target.dataset.url, target.dataset.title);
+            break;
+        case 'edit':
+            if (type === 'votes') {
+                editItem(type, id);
+            } else if (type === 'radio') {
+                editRadio(id);
+            } else {
+                editItem(type, id);
+            }
+            break;
+        case 'delete':
+            deleteItem(type, id);
+            break;
+        case 'share':
+            const platform = target.dataset.platform;
+            const url = target.dataset.url;
+            const title = target.dataset.title;
+            shareToSNS(platform, url, title);
+            break;
+        case 'view-tips':
+            viewTips(id, target.dataset.platform);
+            break;
+        case 'show-example':
+            showExampleText(id, target.dataset.stationName, target.dataset.exampleText);
+            break;
+        case 'show-template':
+            showRadioTemplate(target.dataset.stationName);
+            break;
+    }
+}
+
+// 변경 이벤트 처리
+function handleChange(e) {
+    const target = e.target;
+    
+    // 투표 완료 체크박스
+    if (target.dataset.voteCheckbox) {
+        toggleVoteComplete(parseInt(target.dataset.voteCheckbox));
+    }
+}
 
 // 탭 전환
 function switchTab(tab) {
@@ -871,10 +935,10 @@ async function loadRadio() {
                 <div class="flex justify-between items-start mb-3">
                     <h3 class="text-xl font-bold text-cyan-300 flex-1">${escapeHtml(radio.title)}</h3>
                     <div class="flex gap-2">
-                        <button onclick="editRadio(${radio.id})" class="text-cyan-400 hover:text-cyan-300 transition-colors" title="수정">
+                        <button data-action="edit" data-type="radio" data-id="${radio.id}" class="text-cyan-400 hover:text-cyan-300 transition-colors" title="수정">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button onclick="deleteItem('radio-requests', ${radio.id})" class="text-red-400 hover:text-red-300 transition-colors" title="삭제">
+                        <button data-action="delete" data-type="radio-requests" data-id="${radio.id}" class="text-red-400 hover:text-red-300 transition-colors" title="삭제">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -890,10 +954,10 @@ async function loadRadio() {
                     ${radio.request_url ? `<a href="${escapeHtml(radio.request_url)}" target="_blank" class="flex-1 cyber-link text-white text-center py-3 px-4 rounded-lg hover:shadow-lg transition-all font-bold">
                         <i class="fas fa-external-link-alt mr-2"></i>신청하러 가기
                     </a>` : ''}
-                    ${radio.example_text ? `<button onclick="showExampleText(${radio.id}, '${escapeHtml(radio.station_name)}', \`${escapeHtml(radio.example_text).replace(/`/g, '\\`')}\`)" class="px-4 py-3 rounded-lg font-bold border-2 border-green-500 text-green-300 hover:bg-green-900/30 transition-all whitespace-nowrap">
+                    ${radio.example_text ? `<button data-action="show-example" data-id="${radio.id}" data-station-name="${escapeHtml(radio.station_name)}" data-example-text="${escapeHtml(radio.example_text).replace(/"/g, '&quot;')}" class="px-4 py-3 rounded-lg font-bold border-2 border-green-500 text-green-300 hover:bg-green-900/30 transition-all whitespace-nowrap">
                         <i class="fas fa-file-alt mr-1"></i>예시문 보기
                     </button>` : ''}
-                    ${radio.country === 'international' && !radio.example_text ? `<button onclick="showRadioTemplate('${escapeHtml(radio.station_name)}')" class="px-4 py-3 rounded-lg font-bold border-2 border-purple-500 text-purple-300 hover:bg-purple-900/30 transition-all whitespace-nowrap">
+                    ${radio.country === 'international' && !radio.example_text ? `<button data-action="show-template" data-station-name="${escapeHtml(radio.station_name)}" class="px-4 py-3 rounded-lg font-bold border-2 border-purple-500 text-purple-300 hover:bg-purple-900/30 transition-all whitespace-nowrap">
                         <i class="fas fa-comment-dots mr-1"></i>템플릿 예시문
                     </button>` : ''}
                 </div>
@@ -1157,7 +1221,21 @@ function openAddModal() {
 }
 
 // 모달 닫기
+// 모달 이벤트 리스너 정리
+function cleanupModalListeners() {
+    modalEventListeners.forEach(({ element, event, handler }) => {
+        if (element) {
+            element.removeEventListener(event, handler);
+        }
+    });
+    modalEventListeners = [];
+}
+
+// 모달 닫기
 function closeAddModal() {
+    // 이벤트 리스너 정리
+    cleanupModalListeners();
+    
     document.getElementById('add-modal').classList.add('hidden');
     document.getElementById('add-form').reset();
 }
@@ -1331,55 +1409,68 @@ async function fetchUrlMetadata(url) {
 
 // URL 입력 필드에 자동 인식 기능 추가
 function attachUrlAutoFill() {
+    // 기존 리스너 정리
+    cleanupModalListeners();
+    
     // 투표 URL 필드
     const voteUrlInput = document.querySelector('input[name="vote_url"]');
     if (voteUrlInput) {
-        voteUrlInput.addEventListener('blur', async (e) => {
+        const handler = async (e) => {
             const url = e.target.value.trim();
-            if (!url) return;
+            if (!url || isAutoFilling) return;
             
+            isAutoFilling = true;
             const metadata = await fetchUrlMetadata(url);
             if (metadata) {
-                const titleInput = document.querySelector('input[name="title"]');
-                const descInput = document.querySelector('textarea[name="description"]');
-                const platformInput = document.querySelector('input[name="platform"]');
-                
-                // 제목이 비어있으면 자동 입력
-                if (titleInput && !titleInput.value) {
-                    titleInput.value = metadata.title || '';
-                    titleInput.classList.add('border-cyan-500');
-                    setTimeout(() => titleInput.classList.remove('border-cyan-500'), 2000);
-                }
-                
-                // 설명이 비어있으면 자동 입력
-                if (descInput && !descInput.value) {
-                    descInput.value = metadata.description || '';
-                    descInput.classList.add('border-cyan-500');
-                    setTimeout(() => descInput.classList.remove('border-cyan-500'), 2000);
-                }
-                
-                // 플랫폼이 비어있으면 사이트 이름으로 자동 입력
-                if (platformInput && !platformInput.value && metadata.site_name) {
-                    platformInput.value = metadata.site_name;
-                    platformInput.classList.add('border-cyan-500');
-                    setTimeout(() => platformInput.classList.remove('border-cyan-500'), 2000);
-                }
-                
-                // 성공 메시지
-                const successMsg = document.createElement('div');
-                successMsg.className = 'text-green-400 text-sm mt-2 flex items-center gap-2';
-                successMsg.innerHTML = '<i class="fas fa-check-circle"></i> 링크 정보가 자동으로 입력되었습니다!';
-                e.target.parentElement.appendChild(successMsg);
-                setTimeout(() => successMsg.remove(), 3000);
+                autoFillFields(metadata, ['title', 'description', 'platform']);
+                showToast('🔗 링크 정보가 자동으로 입력되었습니다!', 'success');
             }
-        });
+            isAutoFilling = false;
+        };
+        
+        voteUrlInput.addEventListener('blur', handler);
+        modalEventListeners.push({ element: voteUrlInput, event: 'blur', handler });
     }
     
     // 라디오 URL 필드
     const radioUrlInput = document.querySelector('input[name="request_url"]');
     if (radioUrlInput) {
-        radioUrlInput.addEventListener('blur', async (e) => {
+        const handler = async (e) => {
             const url = e.target.value.trim();
+            if (!url || isAutoFilling) return;
+            
+            isAutoFilling = true;
+            const metadata = await fetchUrlMetadata(url);
+            if (metadata) {
+                autoFillFields(metadata, ['title', 'station_name', 'description']);
+                showToast('🔗 링크 정보가 자동으로 입력되었습니다!', 'success');
+            }
+            isAutoFilling = false;
+        };
+        
+        radioUrlInput.addEventListener('blur', handler);
+        modalEventListeners.push({ element: radioUrlInput, event: 'blur', handler });
+    }
+}
+
+// 공통 필드 자동 입력 함수
+function autoFillFields(metadata, fieldNames) {
+    const mapping = {
+        'title': metadata.title,
+        'description': metadata.description,
+        'platform': metadata.site_name,
+        'station_name': metadata.site_name
+    };
+    
+    fieldNames.forEach(fieldName => {
+        const input = document.querySelector(`[name="${fieldName}"]`);
+        if (input && !input.value && mapping[fieldName]) {
+            input.value = mapping[fieldName];
+            input.classList.add('border-cyan-500');
+            setTimeout(() => input.classList.remove('border-cyan-500'), 2000);
+        }
+    });
+}
             if (!url) return;
             
             const metadata = await fetchUrlMetadata(url);
