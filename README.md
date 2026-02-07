@@ -325,6 +325,50 @@ npm run db:reset
 npm run db:console:local -- --command="SELECT * FROM votes"
 ```
 
+### ⚠️ 데이터 유지 주의사항
+
+#### ✅ 데이터가 유지되는 경우 (안전)
+- `npm run build` - 빌드만 실행
+- `pm2 restart webapp` - 서버 재시작
+- 코드 수정 후 빌드 및 재시작
+- Git 커밋 및 푸시
+
+#### ❌ 데이터가 삭제되는 경우 (주의!)
+- `npm run db:reset` - DB 완전 초기화
+- `rm -rf .wrangler` - 로컬 DB 파일 삭제
+- `.wrangler/` 폴더 삭제
+
+#### 📍 데이터 저장 위치
+- **로컬 개발**: `.wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite`
+- **프로덕션**: Cloudflare D1 클라우드 데이터베이스
+
+#### 💾 데이터 백업 방법
+```bash
+# 현재 데이터 확인
+npx wrangler d1 execute webapp-production --local --command="SELECT COUNT(*) FROM votes"
+
+# 데이터 백업 (SQLite 덤프)
+npx wrangler d1 execute webapp-production --local --command=".dump" > backup.sql
+
+# 백업에서 복원
+npx wrangler d1 execute webapp-production --local --file=backup.sql
+```
+
+#### 🔄 일상적인 개발 워크플로우 (데이터 유지)
+```bash
+# 1. 코드 수정
+# 2. 빌드
+npm run build
+
+# 3. 서버 재시작
+pm2 restart webapp
+
+# 4. 테스트
+curl http://localhost:3000/api/votes
+
+# ✅ 기존 데이터 그대로 유지됨!
+```
+
 ## 📈 향후 개발 계획
 
 ### 완료된 기능
