@@ -51,8 +51,8 @@ async function toggleNotifications() {
 // 초기화 시 알림 버튼 상태 업데이트
 function updateNotificationButtonStatus() {
     const statusElement = document.getElementById('notification-status');
-    if (statusElement && notificationsEnabled) {
-        statusElement.textContent = '알림 끄기';
+    if (statusElement) {
+        statusElement.textContent = notificationsEnabled ? '알림 끄기' : '알림 켜기';
     }
 }
 
