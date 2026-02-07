@@ -12,7 +12,10 @@
   - 광고 시안 요청 등록
   - 국내외 라디오 신청 정보 관리
   - 투표앱별 팁 공유 및 '도움됨' 반응 시스템
-  - **링크 자동 인식** ⭐ NEW - URL 입력 시 자동으로 제목, 설명 등 메타데이터 추출
+  - **링크 자동 인식** ⭐ - URL 입력 시 자동으로 제목, 설명 등 메타데이터 추출
+  - **일정 관리** ⭐ - 오늘 마감 투표, 매일 반복 투표, 오늘 라디오 요청
+  - **해외 라디오 예시문** ⭐ NEW - 방송국별 신청 예시문 제공 및 원클릭 복사
+  - **PWA 지원** ⭐ NEW - 스마트폰 홈 화면에 앱으로 설치 가능
 
 ## 🌐 URL
 
@@ -43,12 +46,37 @@
 - '도움됨' 반응 시스템 (중복 방지)
 - 도움됨 수에 따른 정렬
 
-### 5. 링크 자동 인식 기능 ⭐ NEW
+### 5. 링크 자동 인식 기능 ⭐
 - URL 입력 시 자동으로 웹페이지 메타데이터 추출
 - Open Graph 및 일반 메타태그 파싱
 - 제목, 설명, 플랫폼/방송국 정보 자동 입력
 - 실시간 로딩 표시 및 성공 메시지
 - 투표 URL 및 라디오 신청 URL 지원
+
+### 6. 일정 관리 기능 ⭐
+- **오늘 마감 투표**: 오늘 마감 예정인 투표 한눈에 확인
+- **매일 반복 투표**: 매일 특정 시간에 진행되는 투표 등록
+- **오늘 라디오 요청**: 오늘 신청해야 하는 라디오 정보
+- 요일별 반복 설정 (월, 수, 금 등)
+- 알림 시간 설정
+
+### 7. 해외 라디오 예시문 ⭐ NEW
+- **8개 주요 방송국 예시문 제공**:
+  - BBC Radio 1, iHeartRadio, Z100 New York
+  - Kiss FM UK, Capital FM
+  - KBS 쿨FM, MBC FM4U, SBS 파워FM
+- 아티스트명/곡명 실시간 치환
+- 원클릭 복사 기능
+- 한국어/영어 예시문 자동 구분
+- 커스터마이징 가능한 신청 템플릿
+
+### 8. PWA (Progressive Web App) 지원 ⭐ NEW
+- **스마트폰 홈 화면에 앱으로 설치 가능**
+- Android: 자동 설치 안내 배너 표시
+- iOS: Safari 공유 메뉴에서 "홈 화면에 추가"
+- 오프라인 캐싱 지원 (Service Worker)
+- 앱 아이콘 및 스플래시 스크린
+- 독립 실행형(Standalone) 모드
 
 ## 🏗️ 데이터 아키텍처
 
@@ -68,6 +96,9 @@
 
 #### 5. tip_reactions (팁 반응)
 - id, tip_id (FK), user_identifier, reaction_type, created_at
+
+#### 6. radio_templates (라디오 예시문) ⭐ NEW
+- id, station_name, template_text, language, template_type, placeholder_fields, example_text, created_at, updated_at
 
 ### 스토리지 서비스
 - **Cloudflare D1 Database**: SQLite 기반 관계형 데이터베이스
@@ -116,10 +147,22 @@
 - `DELETE /api/tips/:id` - 팁 삭제
 - `POST /api/tips/:id/helpful` - 팁에 '도움됨' 반응 추가
 
-### 유틸리티 API ⭐ NEW
+### 유틸리티 API ⭐
 - `POST /api/utils/fetch-metadata` - URL 메타데이터 추출
   - Body: `{ "url": "https://example.com" }`
   - Response: `{ "success": true, "data": { "title": "...", "description": "...", "site_name": "...", "url": "..." } }`
+
+### 일정 관리 API ⭐ NEW
+- `GET /api/schedule/today` - 오늘의 일정 조회 (마감 투표, 반복 투표, 라디오)
+- `GET /api/schedule/upcoming` - 다가오는 일정 (7일)
+- `GET /api/schedule/recurring` - 모든 반복 일정 조회
+
+### 라디오 예시문 API ⭐ NEW
+- `GET /api/radio-templates` - 모든 예시문 조회
+- `GET /api/radio-templates/station/:stationName` - 특정 방송국 예시문 조회
+- `POST /api/radio-templates/generate` - 아티스트/곡명 치환하여 텍스트 생성
+  - Body: `{ "template_id": 1, "artist_name": "PLAVE", "song_name": "Way 4 Luv" }`
+- `POST /api/radio-templates` - 새 예시문 추가 (커뮤니티 기여용)
 
 ## 🎨 사용자 가이드
 
@@ -149,6 +192,62 @@
 ### 정보 삭제하기
 - 각 카드 우측 상단 휴지통 아이콘 클릭
 
+### 해외 라디오 예시문 사용하기 ⭐ NEW
+1. 라디오 정보 카드에서 "예시문" 버튼 클릭 (해외 라디오만)
+2. 방송국별 예시문 모달 열림
+3. 아티스트명과 곡명 입력 (기본값: PLAVE, Way 4 Luv)
+4. 실시간으로 텍스트 자동 생성
+5. "복사하기" 버튼으로 클립보드에 복사
+6. 방송국 홈페이지나 앱에서 붙여넣기
+
+### 앱으로 설치하기 (PWA) ⭐ NEW
+#### Android (Chrome, Samsung Internet)
+1. 웹사이트 접속 시 하단에 "앱으로 설치하기" 배너 표시
+2. "설치하기" 버튼 클릭
+3. 홈 화면에 앱 아이콘 추가 완료
+
+#### iOS (Safari)
+1. Safari에서 웹사이트 접속
+2. 하단 공유 버튼 (⬆️) 클릭
+3. "홈 화면에 추가" 선택
+4. "추가" 버튼 클릭
+5. 홈 화면에 앱 아이콘 추가 완료
+
+#### 설치 후 장점
+- 독립된 앱처럼 실행 (브라우저 UI 없음)
+- 빠른 접속 (홈 화면에서 바로 실행)
+- 오프라인에서도 일부 기능 사용 가능
+- 푸시 알림 지원 (향후 추가 예정)
+
+## 💰 비용 정보
+
+### 100% 무료! 추가 비용 없음
+
+이 프로젝트는 **Cloudflare의 무료 플랜**으로 운영되며, 일반적인 팬덤 활동 규모에서는 **영구적으로 무료**입니다.
+
+#### Cloudflare Pages (무료 플랜)
+- ✅ 무제한 요청 (트래픽 제한 없음)
+- ✅ 무료 SSL 인증서 (HTTPS)
+- ✅ 글로벌 CDN (빠른 접속 속도)
+- ✅ 자동 배포 및 버전 관리
+
+#### Cloudflare D1 Database (무료 플랜)
+- ✅ 일일 읽기: 100,000건 (충분!)
+- ✅ 일일 쓰기: 50,000건 (충분!)
+- ✅ 저장 공간: 5GB (수백만 개 데이터 저장 가능)
+
+#### Cloudflare Workers (무료 플랜)
+- ✅ 일일 요청: 100,000건
+- ✅ CPU 시간: 10ms/요청
+
+### 유료가 필요한 경우는?
+
+**거의 없습니다!** 다음과 같은 극단적인 경우에만 필요:
+- 하루 10만 명 이상 동시 접속 (전국 규모 이벤트)
+- 데이터베이스 5GB 초과 (수백만 개 데이터)
+
+**결론**: 일반적인 팬덤 커뮤니티 사용량으로는 **영원히 무료**입니다! 🎉
+
 ## 🚀 배포
 
 ### 플랫폼
@@ -161,6 +260,9 @@
 - ✅ 프론트엔드 UI 완성
 - ✅ PLAVE 테마 디자인 적용 (사이버틱 네온 스타일)
 - ✅ 링크 자동 인식 기능 (URL 메타데이터 추출)
+- ✅ 일정 관리 기능 (오늘 마감, 매일 반복, 라디오 요청)
+- ✅ 해외 라디오 예시문 (8개 방송국, 원클릭 복사)
+- ✅ PWA 지원 (앱 설치, Service Worker, 오프라인 캐싱)
 - ⏳ Cloudflare Pages 프로덕션 배포 예정
 
 ### 기술 스택
@@ -234,6 +336,9 @@ npm run db:console:local -- --command="SELECT * FROM votes"
 - ✅ 반응형 UI 디자인
 - ✅ PLAVE 테마 (사이버틱 네온 스타일)
 - ✅ 링크 자동 인식 (URL 메타데이터 추출)
+- ✅ 일정 관리 (오늘 마감, 매일 반복, 요일별 설정)
+- ✅ 해외 라디오 예시문 (8개 방송국, 자동 치환, 복사 기능)
+- ✅ PWA 지원 (앱 설치, Service Worker, 오프라인)
 
 ### 추천 개발 항목
 1. **사용자 인증 시스템**
