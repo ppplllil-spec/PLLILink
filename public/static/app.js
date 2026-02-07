@@ -1584,6 +1584,269 @@ function copyExampleText(text) {
 }
 
 // 예시문 모달 닫기
+// 예시문 관리 모달 열기
+async function openExampleTextManager() {
+    try {
+        // 모든 라디오 정보 가져오기
+        const response = await axios.get('/api/radio-requests');
+        const radios = response.data.data;
+        
+        const modal = document.createElement('div');
+        modal.id = 'example-text-manager-modal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50';
+        modal.style.backdropFilter = 'blur(10px)';
+        
+        modal.innerHTML = `
+            <div class="card rounded-2xl shadow-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto border-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-black neon-text">
+                        <i class="fas fa-file-alt mr-2"></i>예시문 관리
+                    </h2>
+                    <button onclick="closeExampleTextManager()" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                        <i class="fas fa-times text-3xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    ${radios.length === 0 ? `
+                        <div class="text-center text-gray-400 py-8">
+                            <i class="fas fa-inbox text-4xl mb-3"></i>
+                            <p>등록된 라디오 정보가 없습니다.</p>
+                        </div>
+                    ` : radios.map(radio => `
+                        <div class="card rounded-xl p-5 border border-cyan-900/50">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-bold text-cyan-300">${escapeHtml(radio.title)}</h3>
+                                    <p class="text-sm text-gray-400">${escapeHtml(radio.station_name)}</p>
+                                </div>
+                                <span class="badge ${radio.country === 'domestic' ? 'bg-blue-900/50 text-blue-300 border-blue-500' : 'bg-green-900/50 text-green-300 border-green-500'}">
+                                    ${radio.country === 'domestic' ? '국내' : '해외'}
+                                </span>
+                            </div>
+                            
+                            ${radio.example_text ? `
+                                <div class="bg-gray-900/50 rounded-lg p-3 mb-3">
+                                    <pre class="text-gray-300 whitespace-pre-wrap font-mono text-xs max-h-32 overflow-y-auto">${escapeHtml(radio.example_text)}</pre>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="editExampleText(${radio.id}, '${escapeHtml(radio.station_name)}', \`${escapeHtml(radio.example_text).replace(/`/g, '\\`')}\`)" class="flex-1 px-4 py-2 rounded-lg bg-cyan-600 text-white font-semibold hover:bg-cyan-500 transition-all">
+                                        <i class="fas fa-edit mr-1"></i>수정
+                                    </button>
+                                    <button onclick="deleteExampleText(${radio.id})" class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-500 transition-all">
+                                        <i class="fas fa-trash mr-1"></i>삭제
+                                    </button>
+                                </div>
+                            ` : `
+                                <p class="text-gray-500 text-sm mb-3">예시문이 등록되지 않았습니다.</p>
+                                <button onclick="addExampleText(${radio.id}, '${escapeHtml(radio.station_name)}')" class="w-full px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-500 transition-all">
+                                    <i class="fas fa-plus mr-1"></i>예시문 추가
+                                </button>
+                            `}
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="mt-6 flex justify-end">
+                    <button onclick="closeExampleTextManager()" class="px-8 py-3 rounded-lg font-bold border-2 border-gray-600 text-gray-300 hover:bg-gray-800/50 transition-all">
+                        닫기
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    } catch (error) {
+        showToast('예시문 목록을 불러오는데 실패했습니다', 'error');
+        console.error('예시문 관리 모달 오류:', error);
+    }
+}
+
+// 예시문 관리 모달 닫기
+function closeExampleTextManager() {
+    const modal = document.getElementById('example-text-manager-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 예시문 추가
+async function addExampleText(radioId, stationName) {
+    const modal = document.createElement('div');
+    modal.id = 'add-example-text-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[60]';
+    modal.style.backdropFilter = 'blur(10px)';
+    
+    modal.innerHTML = `
+        <div class="card rounded-2xl shadow-2xl p-8 max-w-2xl w-full border-2">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black neon-text">
+                    <i class="fas fa-plus mr-2"></i>예시문 추가
+                </h2>
+                <button onclick="closeAddExampleTextModal()" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <h3 class="text-lg font-bold text-cyan-300 mb-2">${escapeHtml(stationName)}</h3>
+            </div>
+            
+            <form id="add-example-text-form" class="space-y-4">
+                <div>
+                    <label class="block text-cyan-300 font-semibold mb-2">
+                        <i class="fas fa-file-alt mr-2"></i>예시문
+                    </label>
+                    <textarea name="example_text" placeholder="라디오 신청 예시문을 입력하세요..." required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="8"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-info-circle mr-1 text-cyan-400"></i>라디오 신청 시 사용할 예시문을 작성하세요
+                    </p>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 neon-button text-white px-6 py-3 rounded-xl font-black">
+                        <i class="fas fa-save mr-2"></i>저장
+                    </button>
+                    <button type="button" onclick="closeAddExampleTextModal()" class="px-8 py-3 rounded-xl font-bold border-2 border-gray-600 text-gray-300 hover:bg-gray-800/50 transition-all">
+                        취소
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 폼 제출 이벤트
+    document.getElementById('add-example-text-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        
+        try {
+            await axios.put(`/api/radio-requests/${radioId}`, {
+                example_text: formData.get('example_text')
+            });
+            
+            showToast('✅ 예시문이 추가되었습니다!', 'success');
+            closeAddExampleTextModal();
+            closeExampleTextManager();
+            loadRadio(); // 라디오 목록 새로고침
+            
+            // 예시문 관리 모달 다시 열기
+            setTimeout(() => openExampleTextManager(), 300);
+        } catch (error) {
+            showToast('예시문 추가 실패', 'error');
+            console.error('예시문 추가 오류:', error);
+        }
+    });
+}
+
+// 예시문 추가 모달 닫기
+function closeAddExampleTextModal() {
+    const modal = document.getElementById('add-example-text-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 예시문 수정
+async function editExampleText(radioId, stationName, currentText) {
+    const modal = document.createElement('div');
+    modal.id = 'edit-example-text-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[60]';
+    modal.style.backdropFilter = 'blur(10px)';
+    
+    modal.innerHTML = `
+        <div class="card rounded-2xl shadow-2xl p-8 max-w-2xl w-full border-2">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black neon-text">
+                    <i class="fas fa-edit mr-2"></i>예시문 수정
+                </h2>
+                <button onclick="closeEditExampleTextModal()" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <h3 class="text-lg font-bold text-cyan-300 mb-2">${escapeHtml(stationName)}</h3>
+            </div>
+            
+            <form id="edit-example-text-form" class="space-y-4">
+                <div>
+                    <label class="block text-cyan-300 font-semibold mb-2">
+                        <i class="fas fa-file-alt mr-2"></i>예시문
+                    </label>
+                    <textarea name="example_text" placeholder="라디오 신청 예시문을 입력하세요..." required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="8">${escapeHtml(currentText)}</textarea>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 neon-button text-white px-6 py-3 rounded-xl font-black">
+                        <i class="fas fa-save mr-2"></i>저장
+                    </button>
+                    <button type="button" onclick="closeEditExampleTextModal()" class="px-8 py-3 rounded-xl font-bold border-2 border-gray-600 text-gray-300 hover:bg-gray-800/50 transition-all">
+                        취소
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 폼 제출 이벤트
+    document.getElementById('edit-example-text-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        
+        try {
+            await axios.put(`/api/radio-requests/${radioId}`, {
+                example_text: formData.get('example_text')
+            });
+            
+            showToast('✅ 예시문이 수정되었습니다!', 'success');
+            closeEditExampleTextModal();
+            closeExampleTextManager();
+            loadRadio(); // 라디오 목록 새로고침
+            
+            // 예시문 관리 모달 다시 열기
+            setTimeout(() => openExampleTextManager(), 300);
+        } catch (error) {
+            showToast('예시문 수정 실패', 'error');
+            console.error('예시문 수정 오류:', error);
+        }
+    });
+}
+
+// 예시문 수정 모달 닫기
+function closeEditExampleTextModal() {
+    const modal = document.getElementById('edit-example-text-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 예시문 삭제
+async function deleteExampleText(radioId) {
+    if (!confirm('예시문을 삭제하시겠습니까?')) return;
+    
+    try {
+        await axios.put(`/api/radio-requests/${radioId}`, {
+            example_text: ''
+        });
+        
+        showToast('✅ 예시문이 삭제되었습니다', 'success');
+        closeExampleTextManager();
+        loadRadio(); // 라디오 목록 새로고침
+        
+        // 예시문 관리 모달 다시 열기
+        setTimeout(() => openExampleTextManager(), 300);
+    } catch (error) {
+        showToast('예시문 삭제 실패', 'error');
+        console.error('예시문 삭제 오류:', error);
+    }
+}
+
+// 예시문 모달 닫기
 function closeExampleTextModal() {
     const modal = document.getElementById('example-text-modal');
     if (modal) {

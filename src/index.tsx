@@ -434,10 +434,15 @@ app.get('/', (c) => {
 
             <!-- 라디오 섹션 -->
             <div id="content-radio" class="content-section hidden">
-                <div class="mb-4 flex gap-2">
-                    <button onclick="filterRadio('all')" class="radio-filter-btn px-4 py-2 rounded-lg bg-white shadow">전체</button>
-                    <button onclick="filterRadio('domestic')" class="radio-filter-btn px-4 py-2 rounded-lg bg-white shadow">국내</button>
-                    <button onclick="filterRadio('international')" class="radio-filter-btn px-4 py-2 rounded-lg bg-white shadow">해외</button>
+                <div class="mb-4 flex gap-2 justify-between items-center flex-wrap">
+                    <div class="flex gap-2">
+                        <button onclick="filterRadio('all')" class="radio-filter-btn px-4 py-2 rounded-lg bg-white shadow">전체</button>
+                        <button onclick="filterRadio('domestic')" class="radio-filter-btn px-4 py-2 rounded-lg bg-white shadow">국내</button>
+                        <button onclick="filterRadio('international')" class="radio-filter-btn px-4 py-2 rounded-lg bg-white shadow">해외</button>
+                    </div>
+                    <button onclick="openExampleTextManager()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg">
+                        <i class="fas fa-file-alt mr-2"></i>예시문 관리
+                    </button>
                 </div>
                 <div id="radio-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <!-- 로딩 중... -->

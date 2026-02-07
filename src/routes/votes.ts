@@ -124,7 +124,20 @@ votes.put('/:id', async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { title, description, vote_url, deadline, platform } = body
+    
+    // 기존 데이터 가져오기
+    const existing = await c.env.DB.prepare('SELECT * FROM votes WHERE id = ?').bind(id).first()
+    
+    if (!existing) {
+      return c.json({ success: false, error: 'Vote not found' }, 404)
+    }
+    
+    // 제공된 필드만 업데이트 (부분 업데이트 지원)
+    const title = body.title !== undefined ? body.title : existing.title
+    const description = body.description !== undefined ? body.description : existing.description
+    const vote_url = body.vote_url !== undefined ? body.vote_url : existing.vote_url
+    const deadline = body.deadline !== undefined ? body.deadline : existing.deadline
+    const platform = body.platform !== undefined ? body.platform : existing.platform
     
     const result = await c.env.DB.prepare(`
       UPDATE votes 

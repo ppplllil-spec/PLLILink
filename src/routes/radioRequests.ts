@@ -75,7 +75,23 @@ radioRequests.put('/:id', async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { title, station_name, program_name, request_url, request_method, country, description, example_text } = body
+    
+    // 기존 데이터 가져오기
+    const existing = await c.env.DB.prepare('SELECT * FROM radio_requests WHERE id = ?').bind(id).first()
+    
+    if (!existing) {
+      return c.json({ success: false, error: 'Radio request not found' }, 404)
+    }
+    
+    // 제공된 필드만 업데이트 (부분 업데이트 지원)
+    const title = body.title !== undefined ? body.title : existing.title
+    const station_name = body.station_name !== undefined ? body.station_name : existing.station_name
+    const program_name = body.program_name !== undefined ? body.program_name : existing.program_name
+    const request_url = body.request_url !== undefined ? body.request_url : existing.request_url
+    const request_method = body.request_method !== undefined ? body.request_method : existing.request_method
+    const country = body.country !== undefined ? body.country : existing.country
+    const description = body.description !== undefined ? body.description : existing.description
+    const example_text = body.example_text !== undefined ? body.example_text : existing.example_text
     
     const result = await c.env.DB.prepare(`
       UPDATE radio_requests 
