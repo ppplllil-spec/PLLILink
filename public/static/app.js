@@ -1189,14 +1189,29 @@ function openAddModal() {
             <div>
                 <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3"></textarea>
             </div>
-            <div>
-                <label class="block text-cyan-300 font-semibold mb-2">
-                    <i class="fas fa-file-alt mr-2"></i>예시문 (선택)
+            
+            <!-- 예시문 섹션 - 강조된 스타일 -->
+            <div class="relative p-4 rounded-xl bg-gradient-to-br from-cyan-900/20 to-purple-900/20 border-2 border-dashed border-cyan-500/30">
+                <div class="absolute -top-3 left-4 bg-gray-900 px-2">
+                    <span class="text-cyan-400 font-bold text-sm">
+                        <i class="fas fa-star mr-1"></i>신청 예시문
+                    </span>
+                </div>
+                <label class="block text-cyan-300 font-semibold mb-2 mt-2">
+                    <i class="fas fa-file-alt mr-2"></i>예시문 작성하기 (선택)
                 </label>
-                <textarea name="example_text" placeholder="라디오 신청 예시문을 입력하세요..." class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="5"></textarea>
-                <p class="text-xs text-gray-500 mt-1">
-                    <i class="fas fa-info-circle mr-1 text-cyan-400"></i>라디오 신청 시 사용할 예시문을 작성하세요
-                </p>
+                <textarea name="example_text" placeholder="예: 안녕하세요! PLAVE의 'Way 4 Luv'를 신청합니다. 오늘도 좋은 방송 감사합니다 💜 #PLAVE #플레이브" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/70 text-cyan-100 placeholder-gray-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="5"></textarea>
+                <div class="flex items-start gap-2 mt-2 text-xs text-cyan-300 bg-cyan-900/20 p-2 rounded-lg">
+                    <i class="fas fa-lightbulb text-yellow-400 mt-1"></i>
+                    <div>
+                        <p class="font-semibold mb-1">💡 예시문 작성 팁:</p>
+                        <ul class="list-disc list-inside space-y-1 text-gray-400">
+                            <li>인사말 + 곡명 + 감사 인사 순으로 작성하세요</li>
+                            <li>해시태그로 아티스트명을 추가하면 좋아요</li>
+                            <li>이모지로 더 친근하게 표현할 수 있어요</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             <div>
                 <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
@@ -1998,14 +2013,29 @@ async function editRadio(radioId) {
                     <div>
                         <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3">${escapeHtml(radio.description || '')}</textarea>
                     </div>
-                    <div>
-                        <label class="block text-cyan-300 font-semibold mb-2">
-                            <i class="fas fa-file-alt mr-2"></i>예시문 (선택)
+                    
+                    <!-- 예시문 섹션 - 강조된 스타일 -->
+                    <div class="relative p-4 rounded-xl bg-gradient-to-br from-cyan-900/20 to-purple-900/20 border-2 border-dashed border-cyan-500/30 mt-4">
+                        <div class="absolute -top-3 left-4 bg-gray-900 px-2">
+                            <span class="text-cyan-400 font-bold text-sm">
+                                <i class="fas fa-star mr-1"></i>신청 예시문
+                            </span>
+                        </div>
+                        <label class="block text-cyan-300 font-semibold mb-2 mt-2">
+                            <i class="fas fa-file-alt mr-2"></i>예시문 수정하기 (선택)
                         </label>
-                        <textarea name="example_text" placeholder="라디오 신청 예시문을 입력하세요..." class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="5">${escapeHtml(radio.example_text || '')}</textarea>
-                        <p class="text-xs text-gray-500 mt-1">
-                            <i class="fas fa-info-circle mr-1 text-cyan-400"></i>라디오 신청 시 사용할 예시문을 작성하세요
-                        </p>
+                        <textarea name="example_text" placeholder="예: 안녕하세요! PLAVE의 'Way 4 Luv'를 신청합니다. 오늘도 좋은 방송 감사합니다 💜 #PLAVE #플레이브" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/70 text-cyan-100 placeholder-gray-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="5">${escapeHtml(radio.example_text || '')}</textarea>
+                        <div class="flex items-start gap-2 mt-2 text-xs text-cyan-300 bg-cyan-900/20 p-2 rounded-lg">
+                            <i class="fas fa-lightbulb text-yellow-400 mt-1"></i>
+                            <div>
+                                <p class="font-semibold mb-1">💡 예시문 작성 팁:</p>
+                                <ul class="list-disc list-inside space-y-1 text-gray-400">
+                                    <li>인사말 + 곡명 + 감사 인사 순으로 작성하세요</li>
+                                    <li>해시태그로 아티스트명을 추가하면 좋아요</li>
+                                    <li>이모지로 더 친근하게 표현할 수 있어요</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                     <div class="flex gap-3 pt-6 border-t border-cyan-900/30">
                         <button type="submit" class="flex-1 neon-button text-white px-6 py-3 rounded-xl font-black">
