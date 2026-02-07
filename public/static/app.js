@@ -1297,6 +1297,17 @@ async function editItem(type, id) {
         const response = await axios.get(`/api/${type}/${id}`);
         const item = response.data.data;
         
+        // 투표는 상세 모달로 처리
+        if (type === 'votes') {
+            return editVote(id, item);
+        }
+        
+        // 라디오는 editRadio 함수 사용
+        if (type === 'radio-requests') {
+            return editRadio(id);
+        }
+        
+        // 광고와 팁은 간단한 prompt 사용
         const newTitle = prompt('제목', item.title);
         if (!newTitle) return;
         
@@ -1308,19 +1319,10 @@ async function editItem(type, id) {
             description: newDescription
         };
         
-        // type별 추가 필드
-        if (type === 'votes') {
-            updateData.vote_url = item.vote_url;
-            updateData.deadline = item.deadline;
-            updateData.platform = item.platform;
-        }
-        
         await axios.put(`/api/${type}/${id}`, updateData);
         
         // 데이터 새로고침
-        if (type === 'votes') loadVotes();
-        else if (type === 'ad-requests') loadAds();
-        else if (type === 'radio-requests') loadRadio();
+        if (type === 'ad-requests') loadAds();
         else if (type === 'tips') loadTips();
         
         showToast('수정되었습니다.', 'success');
@@ -1855,6 +1857,102 @@ function closeExampleTextModal() {
 }
 
 // 라디오 수정 함수
+// 투표 수정 모달
+async function editVote(voteId, voteData) {
+    try {
+        // 모달 생성
+        const modal = document.createElement('div');
+        modal.id = 'edit-vote-modal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50';
+        modal.style.backdropFilter = 'blur(10px)';
+        
+        modal.innerHTML = `
+            <div class="card rounded-2xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-black neon-text">투표 정보 수정</h2>
+                    <button onclick="closeEditVoteModal()" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                        <i class="fas fa-times text-3xl"></i>
+                    </button>
+                </div>
+                <form id="edit-vote-form" class="space-y-4">
+                    <div>
+                        <label class="block text-cyan-300 font-semibold mb-2">
+                            <i class="fas fa-heading mr-2"></i>제목 <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" name="title" value="${escapeHtml(voteData.title)}" placeholder="투표 제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    </div>
+                    <div>
+                        <label class="block text-cyan-300 font-semibold mb-2">
+                            <i class="fas fa-link mr-2"></i>투표 URL <span class="text-red-400">*</span>
+                        </label>
+                        <input type="url" name="vote_url" value="${escapeHtml(voteData.vote_url)}" placeholder="https://..." required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    </div>
+                    <div>
+                        <label class="block text-cyan-300 font-semibold mb-2">
+                            <i class="fas fa-calendar mr-2"></i>마감 시간
+                        </label>
+                        <input type="datetime-local" name="deadline" value="${voteData.deadline ? new Date(voteData.deadline).toISOString().slice(0, 16) : ''}" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    </div>
+                    <div>
+                        <label class="block text-cyan-300 font-semibold mb-2">
+                            <i class="fas fa-globe mr-2"></i>플랫폼
+                        </label>
+                        <input type="text" name="platform" value="${escapeHtml(voteData.platform || '')}" placeholder="Twitter, Instagram 등" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    </div>
+                    <div>
+                        <label class="block text-cyan-300 font-semibold mb-2">
+                            <i class="fas fa-align-left mr-2"></i>설명
+                        </label>
+                        <textarea name="description" placeholder="투표에 대한 설명..." class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="4">${escapeHtml(voteData.description || '')}</textarea>
+                    </div>
+                    <div class="flex gap-3 pt-6 border-t border-cyan-900/30">
+                        <button type="submit" class="flex-1 neon-button text-white px-6 py-3 rounded-xl font-black">
+                            <i class="fas fa-save mr-2"></i>저장
+                        </button>
+                        <button type="button" onclick="closeEditVoteModal()" class="px-8 py-3 rounded-xl font-bold border-2 border-gray-600 text-gray-300 hover:bg-gray-800/50 transition-all">
+                            취소
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // 폼 제출 이벤트
+        document.getElementById('edit-vote-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {};
+            
+            for (const [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            try {
+                await axios.put(`/api/votes/${voteId}`, data);
+                showToast('✅ 투표 정보가 수정되었습니다!', 'success');
+                closeEditVoteModal();
+                loadVotes();
+            } catch (error) {
+                showToast(`수정 실패: ${error.response?.data?.error || error.message}`, 'error');
+            }
+        });
+        
+    } catch (error) {
+        showToast('투표 정보를 불러오는데 실패했습니다', 'error');
+        console.error('투표 정보 로드 실패:', error);
+    }
+}
+
+// 투표 수정 모달 닫기
+function closeEditVoteModal() {
+    const modal = document.getElementById('edit-vote-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
 async function editRadio(radioId) {
     try {
         // 라디오 정보 가져오기
