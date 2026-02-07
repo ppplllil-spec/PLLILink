@@ -3,6 +3,62 @@ let currentTab = 'schedule';
 let radioFilter = 'all';
 let isAutoFilling = false;
 
+// 토스트 알림 시스템
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+    const bgColor = type === 'success' ? 'from-green-500 to-green-600' : 
+                    type === 'error' ? 'from-red-500 to-red-600' : 
+                    'from-blue-500 to-blue-600';
+    
+    toast.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-2xl bg-gradient-to-r ${bgColor} text-white font-bold transform transition-all duration-300 translate-x-full flex items-center gap-3 max-w-md`;
+    toast.innerHTML = `
+        <span class="text-2xl">${icon}</span>
+        <span class="flex-1">${message}</span>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // 애니메이션: 슬라이드 인
+    setTimeout(() => toast.style.transform = 'translateX(0)', 10);
+    
+    // 3초 후 사라짐
+    setTimeout(() => {
+        toast.style.transform = 'translateX(150%)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// 링크 복사 함수
+function copyLink(url, title = '') {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url)
+            .then(() => {
+                showToast('🔗 링크가 복사되었습니다!', 'success');
+            })
+            .catch(err => {
+                showToast('복사에 실패했습니다', 'error');
+                console.error('복사 실패:', err);
+            });
+    } else {
+        // fallback: 텍스트 선택 방식
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showToast('🔗 링크가 복사되었습니다!', 'success');
+        } catch (err) {
+            showToast('복사에 실패했습니다', 'error');
+        }
+        document.body.removeChild(textArea);
+    }
+}
+
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
     loadSchedule();
@@ -194,10 +250,13 @@ async function loadVotes() {
                 <div class="flex justify-between items-start mb-3">
                     <h3 class="text-xl font-bold text-cyan-300 flex-1">${escapeHtml(vote.title)}</h3>
                     <div class="flex gap-2">
-                        <button onclick="editItem('votes', ${vote.id})" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                        <button onclick="copyLink('${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="text-green-400 hover:text-green-300 transition-colors" title="링크 복사">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button onclick="editItem('votes', ${vote.id})" class="text-cyan-400 hover:text-cyan-300 transition-colors" title="수정">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button onclick="deleteItem('votes', ${vote.id})" class="text-red-400 hover:text-red-300 transition-colors">
+                        <button onclick="deleteItem('votes', ${vote.id})" class="text-red-400 hover:text-red-300 transition-colors" title="삭제">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -360,13 +419,13 @@ async function markHelpful(tipId) {
     try {
         const userIdentifier = localStorage.getItem('userId') || generateUserId();
         await axios.post(`/api/tips/${tipId}/helpful`, { user_identifier: userIdentifier });
-        alert('도움이 되었다고 표시했습니다!');
+        showToast('도움이 되었다고 표시했습니다!', 'success');
         loadTips();
     } catch (error) {
         if (error.response?.data?.error === 'Already reacted') {
-            alert('이미 반응하셨습니다.');
+            showToast('이미 반응하셨습니다.', 'info');
         } else {
-            alert('오류가 발생했습니다.');
+            showToast('오류가 발생했습니다.', 'error');
         }
     }
 }
@@ -577,9 +636,9 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
         else if (currentTab === 'radio') loadRadio();
         else if (currentTab === 'tips') loadTips();
         
-        alert('등록되었습니다!');
+        showToast('등록되었습니다!', 'success');
     } catch (error) {
-        alert('등록 실패: ' + (error.response?.data?.error || '알 수 없는 오류'));
+        showToast('등록 실패: ' + (error.response?.data?.error || '알 수 없는 오류'), 'error');
     }
 });
 
@@ -617,10 +676,10 @@ async function editItem(type, id) {
         else if (type === 'radio-requests') loadRadio();
         else if (type === 'tips') loadTips();
         
-        alert('수정되었습니다.');
+        showToast('수정되었습니다.', 'success');
     } catch (error) {
         console.error('Edit error:', error);
-        alert('수정 실패: ' + (error.response?.data?.error || '알 수 없는 오류'));
+        showToast('수정 실패: ' + (error.response?.data?.error || '알 수 없는 오류'), 'error');
     }
 }
 
@@ -637,9 +696,9 @@ async function deleteItem(type, id) {
         else if (type === 'radio-requests') loadRadio();
         else if (type === 'tips') loadTips();
         
-        alert('삭제되었습니다.');
+        showToast('삭제되었습니다.', 'success');
     } catch (error) {
-        alert('삭제 실패: ' + (error.response?.data?.error || '알 수 없는 오류'));
+        showToast('삭제 실패: ' + (error.response?.data?.error || '알 수 없는 오류'), 'error');
     }
 }
 
@@ -799,7 +858,7 @@ async function showRadioTemplate(stationName) {
         const templates = response.data.templates;
         
         if (!templates || templates.length === 0) {
-            alert('이 방송국의 예시문이 아직 등록되지 않았습니다.');
+            showToast('이 방송국의 예시문이 아직 등록되지 않았습니다.', 'info');
             return;
         }
         
@@ -932,7 +991,7 @@ async function showRadioTemplate(stationName) {
         
     } catch (error) {
         console.error('템플릿 로드 실패:', error);
-        alert('예시문을 불러오는데 실패했습니다.');
+        showToast('예시문을 불러오는데 실패했습니다.', 'error');
     }
 }
 
@@ -968,7 +1027,7 @@ async function copyToClipboard(elementId) {
         }, 2000);
     } catch (err) {
         console.error('복사 실패:', err);
-        alert('복사에 실패했습니다. 수동으로 복사해주세요.');
+        showToast('복사에 실패했습니다. 수동으로 복사해주세요.', 'error');
     }
 }
 
@@ -1012,13 +1071,13 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             
             updateAuthUI();
             closeLoginModal();
-            alert(`환영합니다, ${currentUser.display_name}님!`);
+            showToast(`환영합니다, ${currentUser.display_name}님!`, 'success');
         } else {
-            alert(response.data.error || '로그인에 실패했습니다.');
+            showToast(response.data.error || '로그인에 실패했습니다.', 'error');
         }
     } catch (error) {
         console.error('Login error:', error);
-        alert('로그인에 실패했습니다: ' + (error.response?.data?.error || error.message));
+        showToast('로그인에 실패했습니다: ' + (error.response?.data?.error || error.message), 'error');
     }
 });
 
@@ -1038,7 +1097,7 @@ async function logout() {
         localStorage.removeItem('session_token');
         
         updateAuthUI();
-        alert('로그아웃되었습니다.');
+        showToast('로그아웃되었습니다.', 'success');
     } catch (error) {
         console.error('Logout error:', error);
     }
