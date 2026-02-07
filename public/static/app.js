@@ -59,6 +59,59 @@ function copyLink(url, title = '') {
     }
 }
 
+// 카운트다운 타이머 함수
+function getCountdownHTML(deadline) {
+    if (!deadline) return '';
+    
+    const deadlineTime = new Date(deadline).getTime();
+    const now = new Date().getTime();
+    const distance = deadlineTime - now;
+    
+    if (distance < 0) {
+        return '<span class="text-red-500 font-bold">⏰ 마감됨</span>';
+    }
+    
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    // 24시간 이내: 빨간색 + 초 단위 표시
+    if (distance < 24 * 60 * 60 * 1000) {
+        const isUrgent = distance < 3 * 60 * 60 * 1000; // 3시간 이내
+        const textColor = isUrgent ? 'text-red-400 animate-pulse' : 'text-orange-400';
+        const icon = isUrgent ? '🔥' : '⏰';
+        
+        if (days > 0) {
+            return `<span class="${textColor} font-bold">${icon} ${days}일 ${hours}시간 ${minutes}분 남음</span>`;
+        } else if (hours > 0) {
+            return `<span class="${textColor} font-bold">${icon} ${hours}시간 ${minutes}분 ${seconds}초 남음</span>`;
+        } else if (minutes > 0) {
+            return `<span class="${textColor} font-bold">${icon} ${minutes}분 ${seconds}초 남음</span>`;
+        } else {
+            return `<span class="${textColor} font-bold">${icon} ${seconds}초 남음!</span>`;
+        }
+    }
+    
+    // 24시간 이상: 일반 표시
+    if (days > 0) {
+        return `<span class="text-cyan-400 font-semibold">⏰ ${days}일 ${hours}시간 남음</span>`;
+    } else {
+        return `<span class="text-cyan-400 font-semibold">⏰ ${hours}시간 ${minutes}분 남음</span>`;
+    }
+}
+
+// 카운트다운 업데이트 함수
+function startCountdownUpdates() {
+    // 1초마다 모든 카운트다운 업데이트
+    setInterval(() => {
+        document.querySelectorAll('[data-deadline]').forEach(element => {
+            const deadline = element.getAttribute('data-deadline');
+            element.innerHTML = getCountdownHTML(deadline);
+        });
+    }, 1000);
+}
+
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
     loadSchedule();
@@ -66,6 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAds();
     loadRadio();
     loadTips();
+    
+    // 카운트다운 타이머 시작
+    startCountdownUpdates();
 });
 
 // 탭 전환
@@ -123,10 +179,9 @@ async function loadSchedule() {
                         </div>
                         <h4 class="text-lg font-bold text-cyan-300 mb-2">${escapeHtml(vote.title)}</h4>
                         ${vote.description ? `<p class="text-gray-300 text-sm mb-3">${escapeHtml(vote.description)}</p>` : ''}
-                        <p class="text-sm text-red-400 mb-2">
-                            <i class="far fa-clock mr-1"></i>
-                            마감: ${new Date(vote.deadline).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}
-                        </p>
+                        <div class="mb-3" data-deadline="${vote.deadline}">
+                            ${getCountdownHTML(vote.deadline)}
+                        </div>
                         <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all font-bold text-sm">
                             <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
                         </a>
@@ -263,10 +318,10 @@ async function loadVotes() {
                 </div>
                 ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500 mb-2">${escapeHtml(vote.platform)}</span>` : ''}
                 ${vote.description ? `<p class="text-gray-300 mb-3">${escapeHtml(vote.description)}</p>` : ''}
+                ${vote.deadline ? `<div class="mb-3" data-deadline="${vote.deadline}">${getCountdownHTML(vote.deadline)}</div>` : ''}
                 <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-3 px-4 rounded-lg hover:shadow-lg transition-all mb-2 font-bold">
                     <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
                 </a>
-                ${vote.deadline ? `<p class="text-sm text-gray-400"><i class="far fa-clock mr-1"></i>마감: ${new Date(vote.deadline).toLocaleString('ko-KR')}</p>` : ''}
                 <button onclick="viewTips(${vote.id}, '${escapeHtml(vote.platform || 'General')}')" class="mt-3 text-sm text-purple-400 hover:text-purple-300 font-semibold transition-colors">
                     <i class="fas fa-lightbulb mr-1"></i>이 투표의 팁 보기
                 </button>
@@ -1037,93 +1092,4 @@ function closeTemplateModal() {
     if (modal) modal.remove();
 }
 
-// 로그인 모달 열기
-function openLoginModal() {
-    document.getElementById('login-modal').classList.remove('hidden');
-}
 
-// 로그인 모달 닫기
-function closeLoginModal() {
-    document.getElementById('login-modal').classList.add('hidden');
-    document.getElementById('login-form').reset();
-}
-
-// 로그인 처리
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const formData = new FormData(e.target);
-    const username = formData.get('username');
-    const password = formData.get('password');
-    
-    try {
-        const passwordHash = await hashPassword(password);
-        
-        const response = await axios.post('/api/auth/login', {
-            username,
-            password
-        });
-        
-        if (response.data.success) {
-            currentUser = response.data.user;
-            sessionToken = response.data.session_token;
-            localStorage.setItem('session_token', sessionToken);
-            
-            updateAuthUI();
-            closeLoginModal();
-            showToast(`환영합니다, ${currentUser.display_name}님!`, 'success');
-        } else {
-            showToast(response.data.error || '로그인에 실패했습니다.', 'error');
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        showToast('로그인에 실패했습니다: ' + (error.response?.data?.error || error.message), 'error');
-    }
-});
-
-// 로그아웃
-async function logout() {
-    if (!confirm('로그아웃하시겠습니까?')) return;
-    
-    try {
-        if (sessionToken) {
-            await axios.post('/api/auth/logout', {
-                session_token: sessionToken
-            });
-        }
-        
-        currentUser = null;
-        sessionToken = null;
-        localStorage.removeItem('session_token');
-        
-        updateAuthUI();
-        showToast('로그아웃되었습니다.', 'success');
-    } catch (error) {
-        console.error('Logout error:', error);
-    }
-}
-
-// 비밀번호 확인 모달
-let passwordCallback = null;
-
-function openPasswordModal(callback) {
-    passwordCallback = callback;
-    document.getElementById('password-modal').classList.remove('hidden');
-}
-
-function closePasswordModal() {
-    document.getElementById('password-modal').classList.add('hidden');
-    document.getElementById('password-form').reset();
-    passwordCallback = null;
-}
-
-document.getElementById('password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const password = document.getElementById('verify-password').value;
-    
-    if (passwordCallback) {
-        await passwordCallback(password);
-        closePasswordModal();
-    }
-});

@@ -10,7 +10,6 @@ import tips from './routes/tips'
 import utils from './routes/utils'
 import schedule from './routes/schedule'
 import radioTemplates from './routes/radioTemplates'
-import auth from './routes/auth'
 
 type Bindings = {
   DB: D1Database
@@ -121,7 +120,6 @@ app.route('/api/tips', tips)
 app.route('/api/utils', utils)
 app.route('/api/schedule', schedule)
 app.route('/api/radio-templates', radioTemplates)
-app.route('/api/auth', auth)
 
 // 메인 페이지
 app.get('/', (c) => {
