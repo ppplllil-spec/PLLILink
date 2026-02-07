@@ -7,6 +7,7 @@ import votes from './routes/votes'
 import adRequests from './routes/adRequests'
 import radioRequests from './routes/radioRequests'
 import tips from './routes/tips'
+import utils from './routes/utils'
 
 type Bindings = {
   DB: D1Database
@@ -25,6 +26,7 @@ app.route('/api/votes', votes)
 app.route('/api/ad-requests', adRequests)
 app.route('/api/radio-requests', radioRequests)
 app.route('/api/tips', tips)
+app.route('/api/utils', utils)
 
 // 메인 페이지
 app.get('/', (c) => {

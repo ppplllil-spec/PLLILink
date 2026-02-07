@@ -1,6 +1,7 @@
 // 전역 상태
 let currentTab = 'votes';
 let radioFilter = 'all';
+let isAutoFilling = false;
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
@@ -233,12 +234,25 @@ function openAddModal() {
     
     if (currentTab === 'votes') {
         fields = `
-            <input type="text" name="title" placeholder="투표 제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
-            <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3"></textarea>
-            <input type="url" name="vote_url" placeholder="투표 링크" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
-            <input type="text" name="platform" placeholder="플랫폼 (예: Twitter, Mnet)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
-            <input type="datetime-local" name="deadline" placeholder="마감일시" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
-            <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <div>
+                <input type="text" name="title" placeholder="투표 제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            </div>
+            <div>
+                <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3"></textarea>
+            </div>
+            <div>
+                <input type="url" name="vote_url" placeholder="투표 링크 (URL 입력 후 다른 곳 클릭하면 자동 인식)" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                <p class="text-xs text-gray-500 mt-1"><i class="fas fa-magic mr-1 text-cyan-400"></i>링크를 입력하고 다른 곳을 클릭하면 자동으로 정보를 불러옵니다</p>
+            </div>
+            <div>
+                <input type="text" name="platform" placeholder="플랫폼 (예: Twitter, Mnet)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            </div>
+            <div>
+                <input type="datetime-local" name="deadline" placeholder="마감일시" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            </div>
+            <div>
+                <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            </div>
         `;
     } else if (currentTab === 'ads') {
         fields = `
@@ -256,17 +270,34 @@ function openAddModal() {
         `;
     } else if (currentTab === 'radio') {
         fields = `
-            <input type="text" name="title" placeholder="제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
-            <input type="text" name="station_name" placeholder="방송국 이름" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
-            <input type="text" name="program_name" placeholder="프로그램 이름 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
-            <input type="url" name="request_url" placeholder="신청 URL (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
-            <input type="text" name="request_method" placeholder="신청 방법 (예: 앱, 문자)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
-            <select name="country" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
-                <option value="domestic">국내</option>
-                <option value="international">해외</option>
-            </select>
-            <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3"></textarea>
-            <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <div>
+                <input type="text" name="title" placeholder="제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            </div>
+            <div>
+                <input type="text" name="station_name" placeholder="방송국 이름" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            </div>
+            <div>
+                <input type="text" name="program_name" placeholder="프로그램 이름 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            </div>
+            <div>
+                <input type="url" name="request_url" placeholder="신청 URL (URL 입력 후 다른 곳 클릭하면 자동 인식)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                <p class="text-xs text-gray-500 mt-1"><i class="fas fa-magic mr-1 text-cyan-400"></i>링크를 입력하고 다른 곳을 클릭하면 자동으로 정보를 불러옵니다</p>
+            </div>
+            <div>
+                <input type="text" name="request_method" placeholder="신청 방법 (예: 앱, 문자)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            </div>
+            <div>
+                <select name="country" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                    <option value="domestic">국내</option>
+                    <option value="international">해외</option>
+                </select>
+            </div>
+            <div>
+                <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3"></textarea>
+            </div>
+            <div>
+                <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            </div>
         `;
     } else if (currentTab === 'tips') {
         fields = `
@@ -279,6 +310,11 @@ function openAddModal() {
     
     formContent.innerHTML = fields;
     modal.classList.remove('hidden');
+    
+    // URL 자동 인식 기능 활성화
+    setTimeout(() => {
+        attachUrlAutoFill();
+    }, 100);
 }
 
 // 모달 닫기
@@ -342,4 +378,131 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// URL 메타데이터 자동 추출
+async function fetchUrlMetadata(url) {
+    if (!url || isAutoFilling) return null;
+    
+    try {
+        isAutoFilling = true;
+        
+        // 로딩 표시
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.id = 'url-loading';
+        loadingIndicator.className = 'text-cyan-400 text-sm mt-2 flex items-center gap-2';
+        loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 링크 정보를 불러오는 중...';
+        
+        const urlInput = document.querySelector('input[name="vote_url"], input[name="request_url"]');
+        if (urlInput && urlInput.parentElement) {
+            const existing = document.getElementById('url-loading');
+            if (existing) existing.remove();
+            urlInput.parentElement.appendChild(loadingIndicator);
+        }
+        
+        const response = await axios.post('/api/utils/fetch-metadata', { url });
+        
+        if (response.data.success) {
+            return response.data.data;
+        }
+        return null;
+    } catch (error) {
+        console.error('메타데이터 추출 실패:', error);
+        return null;
+    } finally {
+        isAutoFilling = false;
+        const loadingIndicator = document.getElementById('url-loading');
+        if (loadingIndicator) loadingIndicator.remove();
+    }
+}
+
+// URL 입력 필드에 자동 인식 기능 추가
+function attachUrlAutoFill() {
+    // 투표 URL 필드
+    const voteUrlInput = document.querySelector('input[name="vote_url"]');
+    if (voteUrlInput) {
+        voteUrlInput.addEventListener('blur', async (e) => {
+            const url = e.target.value.trim();
+            if (!url) return;
+            
+            const metadata = await fetchUrlMetadata(url);
+            if (metadata) {
+                const titleInput = document.querySelector('input[name="title"]');
+                const descInput = document.querySelector('textarea[name="description"]');
+                const platformInput = document.querySelector('input[name="platform"]');
+                
+                // 제목이 비어있으면 자동 입력
+                if (titleInput && !titleInput.value) {
+                    titleInput.value = metadata.title || '';
+                    titleInput.classList.add('border-cyan-500');
+                    setTimeout(() => titleInput.classList.remove('border-cyan-500'), 2000);
+                }
+                
+                // 설명이 비어있으면 자동 입력
+                if (descInput && !descInput.value) {
+                    descInput.value = metadata.description || '';
+                    descInput.classList.add('border-cyan-500');
+                    setTimeout(() => descInput.classList.remove('border-cyan-500'), 2000);
+                }
+                
+                // 플랫폼이 비어있으면 사이트 이름으로 자동 입력
+                if (platformInput && !platformInput.value && metadata.site_name) {
+                    platformInput.value = metadata.site_name;
+                    platformInput.classList.add('border-cyan-500');
+                    setTimeout(() => platformInput.classList.remove('border-cyan-500'), 2000);
+                }
+                
+                // 성공 메시지
+                const successMsg = document.createElement('div');
+                successMsg.className = 'text-green-400 text-sm mt-2 flex items-center gap-2';
+                successMsg.innerHTML = '<i class="fas fa-check-circle"></i> 링크 정보가 자동으로 입력되었습니다!';
+                e.target.parentElement.appendChild(successMsg);
+                setTimeout(() => successMsg.remove(), 3000);
+            }
+        });
+    }
+    
+    // 라디오 URL 필드
+    const radioUrlInput = document.querySelector('input[name="request_url"]');
+    if (radioUrlInput) {
+        radioUrlInput.addEventListener('blur', async (e) => {
+            const url = e.target.value.trim();
+            if (!url) return;
+            
+            const metadata = await fetchUrlMetadata(url);
+            if (metadata) {
+                const titleInput = document.querySelector('input[name="title"]');
+                const stationInput = document.querySelector('input[name="station_name"]');
+                const descInput = document.querySelector('textarea[name="description"]');
+                
+                // 제목이 비어있으면 자동 입력
+                if (titleInput && !titleInput.value) {
+                    titleInput.value = metadata.title || '';
+                    titleInput.classList.add('border-cyan-500');
+                    setTimeout(() => titleInput.classList.remove('border-cyan-500'), 2000);
+                }
+                
+                // 방송국이 비어있으면 사이트 이름으로 자동 입력
+                if (stationInput && !stationInput.value && metadata.site_name) {
+                    stationInput.value = metadata.site_name;
+                    stationInput.classList.add('border-cyan-500');
+                    setTimeout(() => stationInput.classList.remove('border-cyan-500'), 2000);
+                }
+                
+                // 설명이 비어있으면 자동 입력
+                if (descInput && !descInput.value) {
+                    descInput.value = metadata.description || '';
+                    descInput.classList.add('border-cyan-500');
+                    setTimeout(() => descInput.classList.remove('border-cyan-500'), 2000);
+                }
+                
+                // 성공 메시지
+                const successMsg = document.createElement('div');
+                successMsg.className = 'text-green-400 text-sm mt-2 flex items-center gap-2';
+                successMsg.innerHTML = '<i class="fas fa-check-circle"></i> 링크 정보가 자동으로 입력되었습니다!';
+                e.target.parentElement.appendChild(successMsg);
+                setTimeout(() => successMsg.remove(), 3000);
+            }
+        });
+    }
 }
