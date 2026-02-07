@@ -1,0 +1,30 @@
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00bfff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8a2be2;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- 배경 -->
+  <rect width="512" height="512" fill="#0a0e27" rx="80"/>
+  
+  <!-- 메인 로고 원 -->
+  <circle cx="256" cy="256" r="180" fill="url(#grad1)" filter="url(#glow)" opacity="0.9"/>
+  
+  <!-- P 글자 -->
+  <text x="256" y="320" font-family="Orbitron, Arial, sans-serif" font-size="200" font-weight="900" fill="white" text-anchor="middle" filter="url(#glow)">P</text>
+  
+  <!-- 작은 별들 -->
+  <circle cx="120" cy="120" r="8" fill="#00bfff" filter="url(#glow)"/>
+  <circle cx="392" cy="120" r="6" fill="#8a2be2" filter="url(#glow)"/>
+  <circle cx="120" cy="392" r="6" fill="#8a2be2" filter="url(#glow)"/>
+  <circle cx="392" cy="392" r="8" fill="#00bfff" filter="url(#glow)"/>
+</svg>

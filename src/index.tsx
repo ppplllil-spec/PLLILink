@@ -9,6 +9,7 @@ import radioRequests from './routes/radioRequests'
 import tips from './routes/tips'
 import utils from './routes/utils'
 import schedule from './routes/schedule'
+import radioTemplates from './routes/radioTemplates'
 
 type Bindings = {
   DB: D1Database
@@ -22,6 +23,95 @@ app.use('/api/*', cors())
 // 정적 파일 제공
 app.use('/static/*', serveStatic({ root: './public' }))
 
+// manifest.json과 sw.js는 직접 제공
+app.get('/manifest.json', (c) => {
+  return c.json({
+    "name": "PLAVE PLLI Community",
+    "short_name": "PLLI",
+    "description": "플레이브 팬덤 플리들의 투표·광고·라디오 정보 공유 커뮤니티",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a0e27",
+    "theme_color": "#00bfff",
+    "orientation": "portrait-primary",
+    "icons": [
+      {
+        "src": "/static/icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/static/icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any maskable"
+      }
+    ],
+    "categories": ["entertainment", "social", "utilities"],
+    "shortcuts": [
+      {
+        "name": "오늘 일정",
+        "short_name": "일정",
+        "description": "오늘의 투표 및 라디오 일정 보기",
+        "url": "/?tab=schedule",
+        "icons": [{ "src": "/static/icon-192.png", "sizes": "192x192" }]
+      },
+      {
+        "name": "투표 정보",
+        "short_name": "투표",
+        "description": "투표 정보 확인",
+        "url": "/?tab=votes",
+        "icons": [{ "src": "/static/icon-192.png", "sizes": "192x192" }]
+      }
+    ]
+  })
+})
+
+app.get('/sw.js', (c) => {
+  const swCode = `
+const CACHE_NAME = 'plave-plli-v1';
+const urlsToCache = [
+  '/',
+  '/static/app.js',
+  '/static/style.css',
+  '/static/icon-192.png',
+  '/static/icon-512.png'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(urlsToCache))
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => response || fetch(event.request))
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+  `
+  return c.text(swCode, 200, {
+    'Content-Type': 'application/javascript'
+  })
+})
+
 // API 라우트
 app.route('/api/votes', votes)
 app.route('/api/ad-requests', adRequests)
@@ -29,6 +119,7 @@ app.route('/api/radio-requests', radioRequests)
 app.route('/api/tips', tips)
 app.route('/api/utils', utils)
 app.route('/api/schedule', schedule)
+app.route('/api/radio-templates', radioTemplates)
 
 // 메인 페이지
 app.get('/', (c) => {
@@ -38,7 +129,22 @@ app.get('/', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="플레이브 팬덤 플리들의 투표·광고·라디오 정보 공유 커뮤니티">
+        <meta name="theme-color" content="#00bfff">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="PLLI">
+        
         <title>PLAVE PLLI - 투표·광고·라디오 정보 공유</title>
+        
+        <!-- PWA Manifest -->
+        <link rel="manifest" href="/manifest.json">
+        
+        <!-- 앱 아이콘 -->
+        <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+        <link rel="apple-touch-icon" href="/static/icon.svg">
+        
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -322,6 +428,108 @@ app.get('/', (c) => {
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/app.js"></script>
+        
+        <!-- PWA 설치 안내 및 Service Worker 등록 -->
+        <script>
+          // Service Worker 등록
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+              navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                  console.log('Service Worker registered:', registration);
+                })
+                .catch(error => {
+                  console.log('Service Worker registration failed:', error);
+                });
+            });
+          }
+          
+          // PWA 설치 안내
+          let deferredPrompt;
+          window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // 설치 안내 배너 표시
+            const installBanner = document.createElement('div');
+            installBanner.id = 'install-banner';
+            installBanner.className = 'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50';
+            installBanner.innerHTML = \`
+              <div class="card rounded-xl shadow-2xl p-4 border-2 border-cyan-500/50">
+                <div class="flex items-start gap-3">
+                  <div class="text-3xl">📱</div>
+                  <div class="flex-1">
+                    <h3 class="text-lg font-bold text-cyan-300 mb-1">앱으로 설치하기</h3>
+                    <p class="text-sm text-gray-300 mb-3">홈 화면에 추가하고 더 빠르게 접속하세요!</p>
+                    <div class="flex gap-2">
+                      <button onclick="installPWA()" class="flex-1 neon-button text-white px-4 py-2 rounded-lg font-bold text-sm">
+                        설치하기
+                      </button>
+                      <button onclick="closeInstallBanner()" class="px-4 py-2 rounded-lg font-bold text-gray-400 hover:text-gray-200 text-sm">
+                        나중에
+                      </button>
+                    </div>
+                  </div>
+                  <button onclick="closeInstallBanner()" class="text-gray-400 hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+            \`;
+            document.body.appendChild(installBanner);
+          });
+          
+          // PWA 설치 함수
+          window.installPWA = async () => {
+            if (!deferredPrompt) return;
+            
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+              console.log('User accepted the install prompt');
+            }
+            
+            deferredPrompt = null;
+            closeInstallBanner();
+          };
+          
+          // 설치 배너 닫기
+          window.closeInstallBanner = () => {
+            const banner = document.getElementById('install-banner');
+            if (banner) banner.remove();
+          };
+          
+          // iOS 설치 안내 (Safari)
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+          
+          if (isIOS && !isStandalone) {
+            setTimeout(() => {
+              const iosBanner = document.createElement('div');
+              iosBanner.id = 'ios-install-banner';
+              iosBanner.className = 'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50';
+              iosBanner.innerHTML = \`
+                <div class="card rounded-xl shadow-2xl p-4 border-2 border-cyan-500/50">
+                  <div class="flex items-start gap-3">
+                    <div class="text-3xl">🍎</div>
+                    <div class="flex-1">
+                      <h3 class="text-lg font-bold text-cyan-300 mb-1">iOS 앱 설치하기</h3>
+                      <p class="text-sm text-gray-300 mb-2">
+                        Safari에서 <i class="fas fa-share" style="color: #00bfff;"></i> 버튼을 누르고<br>
+                        "홈 화면에 추가"를 선택하세요!
+                      </p>
+                      <button onclick="this.parentElement.parentElement.parentElement.remove()" class="w-full px-4 py-2 rounded-lg font-bold text-gray-400 hover:text-gray-200 text-sm border border-gray-600">
+                        닫기
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              \`;
+              document.body.appendChild(iosBanner);
+            }, 3000);
+          }
+        </script>
         </div>
     </body>
     </html>

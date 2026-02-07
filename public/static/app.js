@@ -221,9 +221,14 @@ async function loadRadio() {
                 ${radio.program_name ? `<p class="text-gray-300 mb-2">${escapeHtml(radio.program_name)}</p>` : ''}
                 ${radio.description ? `<p class="text-gray-300 mb-3">${escapeHtml(radio.description)}</p>` : ''}
                 ${radio.request_method ? `<p class="text-sm text-gray-400 mb-2"><i class="fas fa-phone mr-1 text-purple-400"></i>신청방법: ${escapeHtml(radio.request_method)}</p>` : ''}
-                ${radio.request_url ? `<a href="${escapeHtml(radio.request_url)}" target="_blank" class="block cyber-link text-white text-center py-3 px-4 rounded-lg hover:shadow-lg transition-all font-bold">
-                    <i class="fas fa-external-link-alt mr-2"></i>신청하러 가기
-                </a>` : ''}
+                <div class="flex gap-2">
+                    ${radio.request_url ? `<a href="${escapeHtml(radio.request_url)}" target="_blank" class="flex-1 cyber-link text-white text-center py-3 px-4 rounded-lg hover:shadow-lg transition-all font-bold">
+                        <i class="fas fa-external-link-alt mr-2"></i>신청하러 가기
+                    </a>` : ''}
+                    ${radio.country === 'international' ? `<button onclick="showRadioTemplate('${escapeHtml(radio.station_name)}')" class="px-4 py-3 rounded-lg font-bold border-2 border-purple-500 text-purple-300 hover:bg-purple-900/30 transition-all">
+                        <i class="fas fa-comment-dots mr-1"></i>예시문
+                    </button>` : ''}
+                </div>
             </div>
         `).join('') || '<div class="col-span-full text-center text-gray-400 py-8 font-bold">등록된 라디오 정보가 없습니다.</div>';
     } catch (error) {
@@ -684,4 +689,190 @@ function attachUrlAutoFill() {
             }
         });
     }
+}
+
+// 라디오 예시문 표시
+async function showRadioTemplate(stationName) {
+    try {
+        const response = await axios.get(`/api/radio-templates/station/${encodeURIComponent(stationName)}`);
+        const templates = response.data.templates;
+        
+        if (!templates || templates.length === 0) {
+            alert('이 방송국의 예시문이 아직 등록되지 않았습니다.');
+            return;
+        }
+        
+        // 모달 생성
+        const modal = document.createElement('div');
+        modal.id = 'template-modal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50';
+        modal.style.backdropFilter = 'blur(10px)';
+        
+        modal.innerHTML = `
+            <div class="card rounded-2xl shadow-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto border-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-black neon-text">
+                        <i class="fas fa-comment-dots mr-2"></i>${escapeHtml(stationName)} 신청 예시문
+                    </h2>
+                    <button onclick="closeTemplateModal()" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                        <i class="fas fa-times text-3xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-6">
+                    ${templates.map((template, index) => `
+                        <div class="card rounded-xl p-5 border border-cyan-900/50">
+                            <div class="mb-4">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="badge bg-purple-900/50 text-purple-300 border-purple-500">
+                                        ${template.language === 'ko' ? '한국어' : 'English'}
+                                    </span>
+                                    <span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500">
+                                        ${template.template_type === 'request' ? '신청' : '헌정'}
+                                    </span>
+                                </div>
+                                
+                                <!-- 입력 필드 -->
+                                <div class="space-y-3 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-bold text-cyan-300 mb-1">
+                                            아티스트명
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            id="artist-${index}" 
+                                            placeholder="PLAVE" 
+                                            value="PLAVE"
+                                            class="w-full px-4 py-2 rounded-lg bg-gray-900/50 border border-cyan-800/50 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50 outline-none"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-cyan-300 mb-1">
+                                            곡명
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            id="song-${index}" 
+                                            placeholder="Way 4 Luv" 
+                                            value="Way 4 Luv"
+                                            class="w-full px-4 py-2 rounded-lg bg-gray-900/50 border border-cyan-800/50 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50 outline-none"
+                                        >
+                                    </div>
+                                </div>
+                                
+                                <!-- 생성된 텍스트 -->
+                                <div class="relative">
+                                    <label class="block text-sm font-bold text-cyan-300 mb-2">
+                                        <i class="fas fa-magic mr-1"></i>생성된 신청문
+                                    </label>
+                                    <textarea 
+                                        id="generated-${index}" 
+                                        readonly
+                                        class="w-full px-4 py-3 rounded-lg bg-gray-900/80 border-2 border-purple-500/50 text-white font-mono text-sm whitespace-pre-wrap"
+                                        rows="4"
+                                    >${escapeHtml(template.example_text || template.template_text)}</textarea>
+                                    
+                                    <div class="flex gap-2 mt-3">
+                                        <button 
+                                            onclick="updateTemplate(${index}, ${template.id}, '${escapeHtml(template.template_text)}')" 
+                                            class="flex-1 px-4 py-2 rounded-lg font-bold border-2 border-purple-500 text-purple-300 hover:bg-purple-900/30 transition-all"
+                                        >
+                                            <i class="fas fa-sync-alt mr-2"></i>업데이트
+                                        </button>
+                                        <button 
+                                            onclick="copyToClipboard('generated-${index}')" 
+                                            class="flex-1 neon-button text-white px-4 py-2 rounded-lg font-bold"
+                                        >
+                                            <i class="fas fa-copy mr-2"></i>복사하기
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${template.example_text ? `
+                                <div class="mt-4 pt-4 border-t border-cyan-900/30">
+                                    <p class="text-xs text-gray-400">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        위 입력 필드를 수정하면 자동으로 텍스트가 업데이트됩니다
+                                    </p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="mt-6 pt-4 border-t border-cyan-900/30">
+                    <button onclick="closeTemplateModal()" class="w-full px-6 py-3 rounded-xl font-bold border-2 border-gray-600 text-gray-300 hover:bg-gray-800/50 transition-all">
+                        닫기
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // 각 템플릿의 입력 필드에 이벤트 리스너 추가
+        templates.forEach((template, index) => {
+            const artistInput = document.getElementById(`artist-${index}`);
+            const songInput = document.getElementById(`song-${index}`);
+            
+            if (artistInput && songInput) {
+                const updateText = () => {
+                    let text = template.template_text;
+                    text = text.replace(/\{\{artist_name\}\}/g, artistInput.value || 'PLAVE');
+                    text = text.replace(/\{\{song_name\}\}/g, songInput.value || 'Way 4 Luv');
+                    document.getElementById(`generated-${index}`).value = text;
+                };
+                
+                artistInput.addEventListener('input', updateText);
+                songInput.addEventListener('input', updateText);
+            }
+        });
+        
+    } catch (error) {
+        console.error('템플릿 로드 실패:', error);
+        alert('예시문을 불러오는데 실패했습니다.');
+    }
+}
+
+// 템플릿 업데이트
+function updateTemplate(index, templateId, templateText) {
+    const artistInput = document.getElementById(`artist-${index}`);
+    const songInput = document.getElementById(`song-${index}`);
+    
+    let text = templateText;
+    text = text.replace(/\{\{artist_name\}\}/g, artistInput.value || 'PLAVE');
+    text = text.replace(/\{\{song_name\}\}/g, songInput.value || 'Way 4 Luv');
+    
+    document.getElementById(`generated-${index}`).value = text;
+}
+
+// 클립보드에 복사
+async function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    try {
+        await navigator.clipboard.writeText(element.value);
+        
+        // 성공 메시지 표시
+        const button = event.target.closest('button');
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check mr-2"></i>복사 완료!';
+        button.classList.add('bg-green-600');
+        
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.classList.remove('bg-green-600');
+        }, 2000);
+    } catch (err) {
+        console.error('복사 실패:', err);
+        alert('복사에 실패했습니다. 수동으로 복사해주세요.');
+    }
+}
+
+// 템플릿 모달 닫기
+function closeTemplateModal() {
+    const modal = document.getElementById('template-modal');
+    if (modal) modal.remove();
 }
