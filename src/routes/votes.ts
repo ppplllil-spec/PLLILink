@@ -7,6 +7,46 @@ type Bindings = {
 
 const votes = new Hono<{ Bindings: Bindings }>()
 
+// SHA-256 해시 함수
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(password)
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+// 권한 확인 함수
+async function checkPermission(DB: D1Database, id: string, sessionToken?: string, password?: string): Promise<{ allowed: boolean, role?: string }> {
+  // 관리자/모더레이터 권한 확인
+  if (sessionToken) {
+    const session = await DB.prepare(`
+      SELECT u.role FROM sessions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.session_token = ? AND s.expires_at > CURRENT_TIMESTAMP
+    `).bind(sessionToken).first()
+    
+    if (session && (session.role === 'admin' || session.role === 'moderator')) {
+      return { allowed: true, role: session.role as string }
+    }
+  }
+  
+  // 비밀번호 확인 (비회원)
+  if (password) {
+    const passwordHash = await hashPassword(password)
+    const vote = await DB.prepare(`
+      SELECT id FROM votes WHERE id = ? AND password_hash = ?
+    `).bind(id, passwordHash).first()
+    
+    if (vote) {
+      return { allowed: true, role: 'owner' }
+    }
+  }
+  
+  return { allowed: false }
+}
+
 // 투표 목록 조회
 votes.get('/', async (c) => {
   try {
@@ -43,19 +83,38 @@ votes.get('/:id', async (c) => {
 votes.post('/', async (c) => {
   try {
     const body = await c.req.json()
-    const { title, description, vote_url, deadline, platform, created_by } = body
+    const { title, description, vote_url, deadline, platform, created_by, password, is_recurring, recurrence_type, recurrence_time, recurrence_days } = body
     
     if (!title || !vote_url) {
       return c.json({ success: false, error: 'Title and vote_url are required' }, 400)
     }
     
+    // 비밀번호 해시 (비회원용)
+    let passwordHash = null
+    if (password) {
+      passwordHash = await hashPassword(password)
+    }
+    
     const result = await c.env.DB.prepare(`
-      INSERT INTO votes (title, description, vote_url, deadline, platform, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).bind(title, description || null, vote_url, deadline || null, platform || null, created_by || null).run()
+      INSERT INTO votes (title, description, vote_url, deadline, platform, created_by, password_hash, is_recurring, recurrence_type, recurrence_time, recurrence_days)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      title, 
+      description || null, 
+      vote_url, 
+      deadline || null, 
+      platform || null, 
+      created_by || null, 
+      passwordHash,
+      is_recurring || 0,
+      recurrence_type || null,
+      recurrence_time || null,
+      recurrence_days || null
+    ).run()
     
     return c.json({ success: true, data: { id: result.meta.last_row_id } }, 201)
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Create vote error:', error)
     return c.json({ success: false, error: 'Failed to create vote' }, 500)
   }
 })
@@ -65,7 +124,13 @@ votes.put('/:id', async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { title, description, vote_url, deadline, platform } = body
+    const { title, description, vote_url, deadline, platform, session_token, password } = body
+    
+    // 권한 확인
+    const permission = await checkPermission(c.env.DB, id, session_token, password)
+    if (!permission.allowed) {
+      return c.json({ success: false, error: '수정 권한이 없습니다.' }, 403)
+    }
     
     const result = await c.env.DB.prepare(`
       UPDATE votes 
@@ -78,7 +143,8 @@ votes.put('/:id', async (c) => {
     }
     
     return c.json({ success: true, message: 'Vote updated' })
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Update vote error:', error)
     return c.json({ success: false, error: 'Failed to update vote' }, 500)
   }
 })
@@ -87,6 +153,14 @@ votes.put('/:id', async (c) => {
 votes.delete('/:id', async (c) => {
   try {
     const id = c.req.param('id')
+    const body = await c.req.json()
+    const { session_token, password } = body
+    
+    // 권한 확인
+    const permission = await checkPermission(c.env.DB, id, session_token, password)
+    if (!permission.allowed) {
+      return c.json({ success: false, error: '삭제 권한이 없습니다.' }, 403)
+    }
     
     const result = await c.env.DB.prepare(`
       DELETE FROM votes WHERE id = ?
@@ -97,7 +171,8 @@ votes.delete('/:id', async (c) => {
     }
     
     return c.json({ success: true, message: 'Vote deleted' })
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Delete vote error:', error)
     return c.json({ success: false, error: 'Failed to delete vote' }, 500)
   }
 })

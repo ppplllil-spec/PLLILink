@@ -10,6 +10,7 @@ import tips from './routes/tips'
 import utils from './routes/utils'
 import schedule from './routes/schedule'
 import radioTemplates from './routes/radioTemplates'
+import auth from './routes/auth'
 
 type Bindings = {
   DB: D1Database
@@ -120,6 +121,7 @@ app.route('/api/tips', tips)
 app.route('/api/utils', utils)
 app.route('/api/schedule', schedule)
 app.route('/api/radio-templates', radioTemplates)
+app.route('/api/auth', auth)
 
 // 메인 페이지
 app.get('/', (c) => {
@@ -287,6 +289,21 @@ app.get('/', (c) => {
                             <p class="text-cyan-300 text-sm font-semibold tracking-wider">VIRTUAL IDOL COMMUNITY</p>
                         </div>
                     </div>
+                    <!-- 로그인 버튼 -->
+                    <div id="auth-section">
+                        <button onclick="openLoginModal()" id="login-btn" class="px-6 py-2 rounded-lg font-bold border-2 border-cyan-500 text-cyan-300 hover:bg-cyan-900/30 transition-all">
+                            <i class="fas fa-user mr-2"></i>로그인
+                        </button>
+                        <div id="user-info" class="hidden flex items-center gap-3">
+                            <span class="text-cyan-300 font-semibold">
+                                <i class="fas fa-user-shield mr-1"></i>
+                                <span id="user-display-name"></span>
+                            </span>
+                            <button onclick="logout()" class="px-4 py-2 rounded-lg font-bold text-gray-400 hover:text-gray-200 transition-all">
+                                <i class="fas fa-sign-out-alt mr-1"></i>로그아웃
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <p class="text-gray-300 text-center md:text-left mt-4 border-t border-cyan-900/30 pt-4">
                     <i class="fas fa-star mr-2 text-cyan-400"></i>
@@ -400,6 +417,64 @@ app.get('/', (c) => {
                 <div id="tips-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- 로딩 중... -->
                 </div>
+            </div>
+        </div>
+
+        <!-- 로그인 모달 -->
+        <div id="login-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50" style="backdrop-filter: blur(10px);">
+            <div class="card rounded-2xl shadow-2xl p-8 max-w-md w-full border-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-black neon-text">관리자 로그인</h2>
+                    <button onclick="closeLoginModal()" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                        <i class="fas fa-times text-3xl"></i>
+                    </button>
+                </div>
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-cyan-300 mb-2">아이디</label>
+                        <input type="text" name="username" required class="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-cyan-800/50 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-cyan-300 mb-2">비밀번호</label>
+                        <input type="password" name="password" required class="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-cyan-800/50 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50 outline-none">
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit" class="w-full neon-button text-white px-6 py-3 rounded-xl font-black">
+                            <i class="fas fa-sign-in-alt mr-2"></i>로그인
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-400 text-center mt-4">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        관리자 계정: admin / 비밀번호: plave2024
+                    </p>
+                </form>
+            </div>
+        </div>
+
+        <!-- 비밀번호 확인 모달 -->
+        <div id="password-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50" style="backdrop-filter: blur(10px);">
+            <div class="card rounded-2xl shadow-2xl p-8 max-w-md w-full border-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-black neon-text">비밀번호 확인</h2>
+                    <button onclick="closePasswordModal()" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                        <i class="fas fa-times text-3xl"></i>
+                    </button>
+                </div>
+                <form id="password-form" class="space-y-4">
+                    <p class="text-gray-300 mb-4">작성 시 입력한 비밀번호를 입력하세요</p>
+                    <div>
+                        <label class="block text-sm font-bold text-cyan-300 mb-2">비밀번호</label>
+                        <input type="password" id="verify-password" required class="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-cyan-800/50 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50 outline-none">
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="flex-1 neon-button text-white px-6 py-3 rounded-xl font-black">
+                            <i class="fas fa-check mr-2"></i>확인
+                        </button>
+                        <button type="button" onclick="closePasswordModal()" class="px-8 py-3 rounded-xl font-bold border-2 border-gray-600 text-gray-300 hover:bg-gray-800/50 transition-all">
+                            취소
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 

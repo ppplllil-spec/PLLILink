@@ -2,9 +2,63 @@
 let currentTab = 'schedule'; // 기본 탭을 일정으로 변경
 let radioFilter = 'all';
 let isAutoFilling = false;
+let currentUser = null; // 현재 로그인한 사용자
+let sessionToken = null; // 세션 토큰
+
+// SHA-256 해시 함수
+async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+// 로그인 확인
+async function checkLogin() {
+    const token = localStorage.getItem('session_token');
+    if (!token) return;
+    
+    try {
+        const response = await axios.post('/api/auth/verify', {
+            session_token: token
+        });
+        
+        if (response.data.success) {
+            currentUser = response.data.user;
+            sessionToken = token;
+            updateAuthUI();
+        } else {
+            localStorage.removeItem('session_token');
+        }
+    } catch (error) {
+        console.error('Session verify error:', error);
+        localStorage.removeItem('session_token');
+    }
+}
+
+// 인증 UI 업데이트
+function updateAuthUI() {
+    const loginBtn = document.getElementById('login-btn');
+    const userInfo = document.getElementById('user-info');
+    const userDisplayName = document.getElementById('user-display-name');
+    
+    if (currentUser) {
+        loginBtn.classList.add('hidden');
+        userInfo.classList.remove('hidden');
+        userInfo.classList.add('flex');
+        userDisplayName.textContent = currentUser.display_name || currentUser.username;
+    } else {
+        loginBtn.classList.remove('hidden');
+        userInfo.classList.add('hidden');
+        userInfo.classList.remove('flex');
+    }
+}
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
+    checkLogin();
     loadSchedule();
     loadVotes();
     loadAds();
@@ -149,9 +203,14 @@ async function loadVotes() {
             <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02]">
                 <div class="flex justify-between items-start mb-3">
                     <h3 class="text-xl font-bold text-cyan-300 flex-1">${escapeHtml(vote.title)}</h3>
-                    <button onclick="deleteItem('votes', ${vote.id})" class="text-red-400 hover:text-red-300 transition-colors">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="editItem('votes', ${vote.id})" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteItem('votes', ${vote.id})" class="text-red-400 hover:text-red-300 transition-colors">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
                 ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500 mb-2">${escapeHtml(vote.platform)}</span>` : ''}
                 ${vote.description ? `<p class="text-gray-300 mb-3">${escapeHtml(vote.description)}</p>` : ''}
@@ -524,11 +583,56 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
 });
 
 // 항목 삭제
-async function deleteItem(type, id) {
-    if (!confirm('정말 삭제하시겠습니까?')) return;
+// 항목 수정
+async function editItem(type, id) {
+    // 관리자인 경우 바로 수정
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator')) {
+        openEditModal(type, id);
+        return;
+    }
     
+    // 비회원인 경우 비밀번호 확인
+    openPasswordModal(async (password) => {
+        try {
+            const passwordHash = await hashPassword(password);
+            
+            // 비밀번호 확인 API 호출 (간단 구현: 수정 시도로 대체)
+            openEditModal(type, id, password);
+        } catch (error) {
+            console.error('Password verify error:', error);
+            alert('비밀번호 확인에 실패했습니다.');
+        }
+    });
+}
+
+// 수정 모달 열기 (실제 구현은 간단하게 프롬프트 사용)
+async function openEditModal(type, id, password = null) {
     try {
-        await axios.delete(`/api/${type}/${id}`);
+        // 기존 데이터 가져오기
+        const response = await axios.get(`/api/${type}/${id}`);
+        const item = response.data.data;
+        
+        const newTitle = prompt('제목', item.title);
+        if (!newTitle) return;
+        
+        const newDescription = prompt('설명', item.description || '');
+        
+        // 수정 요청
+        const updateData = {
+            title: newTitle,
+            description: newDescription,
+            session_token: sessionToken,
+            password: password
+        };
+        
+        // type별 추가 필드
+        if (type === 'votes') {
+            updateData.vote_url = item.vote_url;
+            updateData.deadline = item.deadline;
+            updateData.platform = item.platform;
+        }
+        
+        await axios.put(`/api/${type}/${id}`, updateData);
         
         // 데이터 새로고침
         if (type === 'votes') loadVotes();
@@ -536,10 +640,57 @@ async function deleteItem(type, id) {
         else if (type === 'radio-requests') loadRadio();
         else if (type === 'tips') loadTips();
         
-        alert('삭제되었습니다.');
+        alert('수정되었습니다.');
     } catch (error) {
-        alert('삭제 실패: ' + (error.response?.data?.error || '알 수 없는 오류'));
+        console.error('Edit error:', error);
+        alert('수정 실패: ' + (error.response?.data?.error || '알 수 없는 오류'));
     }
+}
+
+// 항목 삭제
+async function deleteItem(type, id) {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    
+    // 관리자인 경우 바로 삭제
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator')) {
+        try {
+            await axios.delete(`/api/${type}/${id}`, {
+                data: { session_token: sessionToken }
+            });
+            
+            // 데이터 새로고침
+            if (type === 'votes') loadVotes();
+            else if (type === 'ad-requests') loadAds();
+            else if (type === 'radio-requests') loadRadio();
+            else if (type === 'tips') loadTips();
+            
+            alert('삭제되었습니다.');
+        } catch (error) {
+            alert('삭제 실패: ' + (error.response?.data?.error || '알 수 없는 오류'));
+        }
+        return;
+    }
+    
+    // 비회원인 경우 비밀번호 확인
+    openPasswordModal(async (password) => {
+        try {
+            const passwordHash = await hashPassword(password);
+            
+            await axios.delete(`/api/${type}/${id}`, {
+                data: { password }
+            });
+            
+            // 데이터 새로고침
+            if (type === 'votes') loadVotes();
+            else if (type === 'ad-requests') loadAds();
+            else if (type === 'radio-requests') loadRadio();
+            else if (type === 'tips') loadTips();
+            
+            alert('삭제되었습니다.');
+        } catch (error) {
+            alert('삭제 실패: ' + (error.response?.data?.error || '알 수 없는 오류'));
+        }
+    });
 }
 
 // XSS 방지를 위한 HTML 이스케이프
@@ -876,3 +1027,94 @@ function closeTemplateModal() {
     const modal = document.getElementById('template-modal');
     if (modal) modal.remove();
 }
+
+// 로그인 모달 열기
+function openLoginModal() {
+    document.getElementById('login-modal').classList.remove('hidden');
+}
+
+// 로그인 모달 닫기
+function closeLoginModal() {
+    document.getElementById('login-modal').classList.add('hidden');
+    document.getElementById('login-form').reset();
+}
+
+// 로그인 처리
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const username = formData.get('username');
+    const password = formData.get('password');
+    
+    try {
+        const passwordHash = await hashPassword(password);
+        
+        const response = await axios.post('/api/auth/login', {
+            username,
+            password
+        });
+        
+        if (response.data.success) {
+            currentUser = response.data.user;
+            sessionToken = response.data.session_token;
+            localStorage.setItem('session_token', sessionToken);
+            
+            updateAuthUI();
+            closeLoginModal();
+            alert(`환영합니다, ${currentUser.display_name}님!`);
+        } else {
+            alert(response.data.error || '로그인에 실패했습니다.');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('로그인에 실패했습니다: ' + (error.response?.data?.error || error.message));
+    }
+});
+
+// 로그아웃
+async function logout() {
+    if (!confirm('로그아웃하시겠습니까?')) return;
+    
+    try {
+        if (sessionToken) {
+            await axios.post('/api/auth/logout', {
+                session_token: sessionToken
+            });
+        }
+        
+        currentUser = null;
+        sessionToken = null;
+        localStorage.removeItem('session_token');
+        
+        updateAuthUI();
+        alert('로그아웃되었습니다.');
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+}
+
+// 비밀번호 확인 모달
+let passwordCallback = null;
+
+function openPasswordModal(callback) {
+    passwordCallback = callback;
+    document.getElementById('password-modal').classList.remove('hidden');
+}
+
+function closePasswordModal() {
+    document.getElementById('password-modal').classList.add('hidden');
+    document.getElementById('password-form').reset();
+    passwordCallback = null;
+}
+
+document.getElementById('password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const password = document.getElementById('verify-password').value;
+    
+    if (passwordCallback) {
+        await passwordCallback(password);
+        closePasswordModal();
+    }
+});
