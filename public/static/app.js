@@ -17,10 +17,13 @@ function switchTab(tab) {
     // 탭 버튼 스타일 업데이트
     document.querySelectorAll('[id^="tab-"]').forEach(btn => {
         btn.classList.remove('tab-active');
-        btn.classList.add('hover:bg-gray-100');
+        btn.classList.remove('text-cyan-300');
+        btn.classList.add('text-gray-300');
     });
-    document.getElementById(`tab-${tab}`).classList.add('tab-active');
-    document.getElementById(`tab-${tab}`).classList.remove('hover:bg-gray-100');
+    const activeTab = document.getElementById(`tab-${tab}`);
+    activeTab.classList.add('tab-active');
+    activeTab.classList.add('text-cyan-300');
+    activeTab.classList.remove('text-gray-300');
     
     // 콘텐츠 표시/숨김
     document.querySelectorAll('.content-section').forEach(section => {
@@ -43,24 +46,24 @@ async function loadVotes() {
         
         const votesList = document.getElementById('votes-list');
         votesList.innerHTML = votes.map(vote => `
-            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all">
+            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02]">
                 <div class="flex justify-between items-start mb-3">
-                    <h3 class="text-xl font-bold text-gray-800 flex-1">${escapeHtml(vote.title)}</h3>
-                    <button onclick="deleteItem('votes', ${vote.id})" class="text-red-500 hover:text-red-700">
+                    <h3 class="text-xl font-bold text-cyan-300 flex-1">${escapeHtml(vote.title)}</h3>
+                    <button onclick="deleteItem('votes', ${vote.id})" class="text-red-400 hover:text-red-300 transition-colors">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
-                ${vote.platform ? `<span class="badge bg-purple-100 text-purple-700 mb-2">${escapeHtml(vote.platform)}</span>` : ''}
-                ${vote.description ? `<p class="text-gray-600 mb-3">${escapeHtml(vote.description)}</p>` : ''}
-                <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block bg-gradient-to-r from-purple-600 to-pink-600 text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all mb-2">
+                ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500 mb-2">${escapeHtml(vote.platform)}</span>` : ''}
+                ${vote.description ? `<p class="text-gray-300 mb-3">${escapeHtml(vote.description)}</p>` : ''}
+                <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-3 px-4 rounded-lg hover:shadow-lg transition-all mb-2 font-bold">
                     <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
                 </a>
-                ${vote.deadline ? `<p class="text-sm text-gray-500"><i class="far fa-clock mr-1"></i>마감: ${new Date(vote.deadline).toLocaleString('ko-KR')}</p>` : ''}
-                <button onclick="viewTips(${vote.id}, '${escapeHtml(vote.platform || 'General')}')" class="mt-2 text-sm text-purple-600 hover:text-purple-800">
+                ${vote.deadline ? `<p class="text-sm text-gray-400"><i class="far fa-clock mr-1"></i>마감: ${new Date(vote.deadline).toLocaleString('ko-KR')}</p>` : ''}
+                <button onclick="viewTips(${vote.id}, '${escapeHtml(vote.platform || 'General')}')" class="mt-3 text-sm text-purple-400 hover:text-purple-300 font-semibold transition-colors">
                     <i class="fas fa-lightbulb mr-1"></i>이 투표의 팁 보기
                 </button>
             </div>
-        `).join('') || '<div class="col-span-full text-center text-gray-500 py-8">등록된 투표가 없습니다.</div>';
+        `).join('') || '<div class="col-span-full text-center text-gray-400 py-8 font-bold">등록된 투표가 없습니다.</div>';
     } catch (error) {
         console.error('투표 로드 실패:', error);
     }
@@ -74,22 +77,22 @@ async function loadAds() {
         
         const adsList = document.getElementById('ads-list');
         adsList.innerHTML = ads.map(ad => `
-            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all">
+            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02]">
                 <div class="flex justify-between items-start mb-3">
-                    <h3 class="text-xl font-bold text-gray-800 flex-1">${escapeHtml(ad.title)}</h3>
-                    <button onclick="deleteItem('ad-requests', ${ad.id})" class="text-red-500 hover:text-red-700">
+                    <h3 class="text-xl font-bold text-cyan-300 flex-1">${escapeHtml(ad.title)}</h3>
+                    <button onclick="deleteItem('ad-requests', ${ad.id})" class="text-red-400 hover:text-red-300 transition-colors">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
-                <span class="badge ${ad.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} mb-2">
+                <span class="badge ${ad.status === 'open' ? 'bg-green-900/50 text-green-300 border-green-500' : 'bg-yellow-900/50 text-yellow-300 border-yellow-500'} mb-2">
                     ${ad.status === 'open' ? '모집중' : '진행중'}
                 </span>
-                <p class="text-gray-600 mb-2"><i class="fas fa-map-marker-alt mr-2"></i>${escapeHtml(ad.location)}</p>
-                ${ad.description ? `<p class="text-gray-600 mb-3">${escapeHtml(ad.description)}</p>` : ''}
-                ${ad.contact_info ? `<p class="text-sm text-gray-500 mb-2"><i class="fas fa-envelope mr-1"></i>${escapeHtml(ad.contact_info)}</p>` : ''}
-                ${ad.deadline ? `<p class="text-sm text-gray-500"><i class="far fa-clock mr-1"></i>마감: ${new Date(ad.deadline).toLocaleString('ko-KR')}</p>` : ''}
+                <p class="text-gray-300 mb-2"><i class="fas fa-map-marker-alt mr-2 text-cyan-400"></i>${escapeHtml(ad.location)}</p>
+                ${ad.description ? `<p class="text-gray-300 mb-3">${escapeHtml(ad.description)}</p>` : ''}
+                ${ad.contact_info ? `<p class="text-sm text-gray-400 mb-2"><i class="fas fa-envelope mr-1 text-purple-400"></i>${escapeHtml(ad.contact_info)}</p>` : ''}
+                ${ad.deadline ? `<p class="text-sm text-gray-400"><i class="far fa-clock mr-1"></i>마감: ${new Date(ad.deadline).toLocaleString('ko-KR')}</p>` : ''}
             </div>
-        `).join('') || '<div class="col-span-full text-center text-gray-500 py-8">등록된 광고 시안 요청이 없습니다.</div>';
+        `).join('') || '<div class="col-span-full text-center text-gray-400 py-8 font-bold">등록된 광고 시안 요청이 없습니다.</div>';
     } catch (error) {
         console.error('광고 로드 실패:', error);
     }
@@ -104,25 +107,25 @@ async function loadRadio() {
         
         const radioList = document.getElementById('radio-list');
         radioList.innerHTML = radios.map(radio => `
-            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all">
+            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02]">
                 <div class="flex justify-between items-start mb-3">
-                    <h3 class="text-xl font-bold text-gray-800 flex-1">${escapeHtml(radio.title)}</h3>
-                    <button onclick="deleteItem('radio-requests', ${radio.id})" class="text-red-500 hover:text-red-700">
+                    <h3 class="text-xl font-bold text-cyan-300 flex-1">${escapeHtml(radio.title)}</h3>
+                    <button onclick="deleteItem('radio-requests', ${radio.id})" class="text-red-400 hover:text-red-300 transition-colors">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
-                <span class="badge ${radio.country === 'domestic' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'} mb-2">
+                <span class="badge ${radio.country === 'domestic' ? 'bg-blue-900/50 text-blue-300 border-blue-500' : 'bg-green-900/50 text-green-300 border-green-500'} mb-2">
                     ${radio.country === 'domestic' ? '국내' : '해외'}
                 </span>
-                <p class="text-lg font-semibold text-gray-700 mb-1">${escapeHtml(radio.station_name)}</p>
-                ${radio.program_name ? `<p class="text-gray-600 mb-2">${escapeHtml(radio.program_name)}</p>` : ''}
-                ${radio.description ? `<p class="text-gray-600 mb-3">${escapeHtml(radio.description)}</p>` : ''}
-                ${radio.request_method ? `<p class="text-sm text-gray-500 mb-2"><i class="fas fa-phone mr-1"></i>신청방법: ${escapeHtml(radio.request_method)}</p>` : ''}
-                ${radio.request_url ? `<a href="${escapeHtml(radio.request_url)}" target="_blank" class="block bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center py-2 px-4 rounded-lg hover:shadow-lg transition-all">
+                <p class="text-lg font-semibold text-cyan-400 mb-1">${escapeHtml(radio.station_name)}</p>
+                ${radio.program_name ? `<p class="text-gray-300 mb-2">${escapeHtml(radio.program_name)}</p>` : ''}
+                ${radio.description ? `<p class="text-gray-300 mb-3">${escapeHtml(radio.description)}</p>` : ''}
+                ${radio.request_method ? `<p class="text-sm text-gray-400 mb-2"><i class="fas fa-phone mr-1 text-purple-400"></i>신청방법: ${escapeHtml(radio.request_method)}</p>` : ''}
+                ${radio.request_url ? `<a href="${escapeHtml(radio.request_url)}" target="_blank" class="block cyber-link text-white text-center py-3 px-4 rounded-lg hover:shadow-lg transition-all font-bold">
                     <i class="fas fa-external-link-alt mr-2"></i>신청하러 가기
                 </a>` : ''}
             </div>
-        `).join('') || '<div class="col-span-full text-center text-gray-500 py-8">등록된 라디오 정보가 없습니다.</div>';
+        `).join('') || '<div class="col-span-full text-center text-gray-400 py-8 font-bold">등록된 라디오 정보가 없습니다.</div>';
     } catch (error) {
         console.error('라디오 로드 실패:', error);
     }
@@ -136,29 +139,29 @@ async function loadTips() {
         
         const tipsList = document.getElementById('tips-list');
         tipsList.innerHTML = tips.map(tip => `
-            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all">
+            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02]">
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1">
                         <div class="flex items-center gap-2 mb-2">
-                            <span class="badge bg-indigo-100 text-indigo-700">${escapeHtml(tip.platform)}</span>
-                            ${tip.is_verified ? '<i class="fas fa-check-circle text-green-500" title="검증됨"></i>' : ''}
+                            <span class="badge bg-indigo-900/50 text-indigo-300 border-indigo-500">${escapeHtml(tip.platform)}</span>
+                            ${tip.is_verified ? '<i class="fas fa-check-circle text-green-400" title="검증됨" style="text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);"></i>' : ''}
                         </div>
-                        <h3 class="text-xl font-bold text-gray-800">${escapeHtml(tip.tip_title)}</h3>
+                        <h3 class="text-xl font-bold text-cyan-300">${escapeHtml(tip.tip_title)}</h3>
                     </div>
-                    <button onclick="deleteItem('tips', ${tip.id})" class="text-red-500 hover:text-red-700">
+                    <button onclick="deleteItem('tips', ${tip.id})" class="text-red-400 hover:text-red-300 transition-colors">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
-                <p class="text-gray-700 mb-3 whitespace-pre-wrap">${escapeHtml(tip.tip_content)}</p>
-                <div class="flex items-center justify-between text-sm">
-                    <button onclick="markHelpful(${tip.id})" class="flex items-center gap-2 text-purple-600 hover:text-purple-800">
+                <p class="text-gray-300 mb-3 whitespace-pre-wrap">${escapeHtml(tip.tip_content)}</p>
+                <div class="flex items-center justify-between text-sm border-t border-cyan-900/30 pt-3">
+                    <button onclick="markHelpful(${tip.id})" class="flex items-center gap-2 text-purple-400 hover:text-purple-300 font-semibold transition-colors">
                         <i class="fas fa-thumbs-up"></i>
                         <span>도움됨 ${tip.helpful_count}</span>
                     </button>
-                    <span class="text-gray-500">by ${escapeHtml(tip.created_by || '익명')}</span>
+                    <span class="text-gray-400">by ${escapeHtml(tip.created_by || '익명')}</span>
                 </div>
             </div>
-        `).join('') || '<div class="col-span-full text-center text-gray-500 py-8">등록된 팁이 없습니다.</div>';
+        `).join('') || '<div class="col-span-full text-center text-gray-400 py-8 font-bold">등록된 팁이 없습니다.</div>';
     } catch (error) {
         console.error('팁 로드 실패:', error);
     }
@@ -172,29 +175,29 @@ function viewTips(voteId, platform) {
         const tips = response.data.data;
         const tipsList = document.getElementById('tips-list');
         tipsList.innerHTML = tips.map(tip => `
-            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all">
+            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02]">
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1">
                         <div class="flex items-center gap-2 mb-2">
-                            <span class="badge bg-indigo-100 text-indigo-700">${escapeHtml(tip.platform)}</span>
-                            ${tip.is_verified ? '<i class="fas fa-check-circle text-green-500" title="검증됨"></i>' : ''}
+                            <span class="badge bg-indigo-900/50 text-indigo-300 border-indigo-500">${escapeHtml(tip.platform)}</span>
+                            ${tip.is_verified ? '<i class="fas fa-check-circle text-green-400" title="검증됨" style="text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);"></i>' : ''}
                         </div>
-                        <h3 class="text-xl font-bold text-gray-800">${escapeHtml(tip.tip_title)}</h3>
+                        <h3 class="text-xl font-bold text-cyan-300">${escapeHtml(tip.tip_title)}</h3>
                     </div>
-                    <button onclick="deleteItem('tips', ${tip.id})" class="text-red-500 hover:text-red-700">
+                    <button onclick="deleteItem('tips', ${tip.id})" class="text-red-400 hover:text-red-300 transition-colors">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
-                <p class="text-gray-700 mb-3 whitespace-pre-wrap">${escapeHtml(tip.tip_content)}</p>
-                <div class="flex items-center justify-between text-sm">
-                    <button onclick="markHelpful(${tip.id})" class="flex items-center gap-2 text-purple-600 hover:text-purple-800">
+                <p class="text-gray-300 mb-3 whitespace-pre-wrap">${escapeHtml(tip.tip_content)}</p>
+                <div class="flex items-center justify-between text-sm border-t border-cyan-900/30 pt-3">
+                    <button onclick="markHelpful(${tip.id})" class="flex items-center gap-2 text-purple-400 hover:text-purple-300 font-semibold transition-colors">
                         <i class="fas fa-thumbs-up"></i>
                         <span>도움됨 ${tip.helpful_count}</span>
                     </button>
-                    <span class="text-gray-500">by ${escapeHtml(tip.created_by || '익명')}</span>
+                    <span class="text-gray-400">by ${escapeHtml(tip.created_by || '익명')}</span>
                 </div>
             </div>
-        `).join('') || '<div class="col-span-full text-center text-gray-500 py-8">이 투표에 대한 팁이 아직 없습니다.</div>';
+        `).join('') || '<div class="col-span-full text-center text-gray-400 py-8 font-bold">이 투표에 대한 팁이 아직 없습니다.</div>';
     });
 }
 
@@ -230,47 +233,47 @@ function openAddModal() {
     
     if (currentTab === 'votes') {
         fields = `
-            <input type="text" name="title" placeholder="투표 제목" required class="w-full p-3 border rounded-lg">
-            <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border rounded-lg" rows="3"></textarea>
-            <input type="url" name="vote_url" placeholder="투표 링크" required class="w-full p-3 border rounded-lg">
-            <input type="text" name="platform" placeholder="플랫폼 (예: Twitter, Mnet)" class="w-full p-3 border rounded-lg">
-            <input type="datetime-local" name="deadline" placeholder="마감일시" class="w-full p-3 border rounded-lg">
-            <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border rounded-lg">
+            <input type="text" name="title" placeholder="투표 제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3"></textarea>
+            <input type="url" name="vote_url" placeholder="투표 링크" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <input type="text" name="platform" placeholder="플랫폼 (예: Twitter, Mnet)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <input type="datetime-local" name="deadline" placeholder="마감일시" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
         `;
     } else if (currentTab === 'ads') {
         fields = `
-            <input type="text" name="title" placeholder="광고 제목" required class="w-full p-3 border rounded-lg">
-            <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border rounded-lg" rows="3"></textarea>
-            <input type="text" name="location" placeholder="위치" required class="w-full p-3 border rounded-lg">
-            <input type="text" name="contact_info" placeholder="연락처 (선택)" class="w-full p-3 border rounded-lg">
-            <input type="datetime-local" name="deadline" placeholder="마감일시" class="w-full p-3 border rounded-lg">
-            <select name="status" class="w-full p-3 border rounded-lg">
+            <input type="text" name="title" placeholder="광고 제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3"></textarea>
+            <input type="text" name="location" placeholder="위치" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <input type="text" name="contact_info" placeholder="연락처 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <input type="datetime-local" name="deadline" placeholder="마감일시" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <select name="status" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
                 <option value="open">모집중</option>
                 <option value="in_progress">진행중</option>
                 <option value="closed">마감</option>
             </select>
-            <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border rounded-lg">
+            <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
         `;
     } else if (currentTab === 'radio') {
         fields = `
-            <input type="text" name="title" placeholder="제목" required class="w-full p-3 border rounded-lg">
-            <input type="text" name="station_name" placeholder="방송국 이름" required class="w-full p-3 border rounded-lg">
-            <input type="text" name="program_name" placeholder="프로그램 이름 (선택)" class="w-full p-3 border rounded-lg">
-            <input type="url" name="request_url" placeholder="신청 URL (선택)" class="w-full p-3 border rounded-lg">
-            <input type="text" name="request_method" placeholder="신청 방법 (예: 앱, 문자)" class="w-full p-3 border rounded-lg">
-            <select name="country" class="w-full p-3 border rounded-lg">
+            <input type="text" name="title" placeholder="제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <input type="text" name="station_name" placeholder="방송국 이름" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <input type="text" name="program_name" placeholder="프로그램 이름 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <input type="url" name="request_url" placeholder="신청 URL (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <input type="text" name="request_method" placeholder="신청 방법 (예: 앱, 문자)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <select name="country" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
                 <option value="domestic">국내</option>
                 <option value="international">해외</option>
             </select>
-            <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border rounded-lg" rows="3"></textarea>
-            <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border rounded-lg">
+            <textarea name="description" placeholder="설명 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="3"></textarea>
+            <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
         `;
     } else if (currentTab === 'tips') {
         fields = `
-            <input type="text" name="platform" placeholder="플랫폼 (예: Twitter, Mnet, General)" required class="w-full p-3 border rounded-lg">
-            <input type="text" name="tip_title" placeholder="팁 제목" required class="w-full p-3 border rounded-lg">
-            <textarea name="tip_content" placeholder="팁 내용" required class="w-full p-3 border rounded-lg" rows="5"></textarea>
-            <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border rounded-lg">
+            <input type="text" name="platform" placeholder="플랫폼 (예: Twitter, Mnet, General)" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <input type="text" name="tip_title" placeholder="팁 제목" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+            <textarea name="tip_content" placeholder="팁 내용" required class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" rows="5"></textarea>
+            <input type="text" name="created_by" placeholder="작성자 (선택)" class="w-full p-3 border border-cyan-800/50 rounded-lg bg-gray-900/50 text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
         `;
     }
     
