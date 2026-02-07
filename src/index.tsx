@@ -287,6 +287,11 @@ app.get('/', (c) => {
                             <p class="text-cyan-300 text-sm font-semibold tracking-wider">VIRTUAL IDOL COMMUNITY</p>
                         </div>
                     </div>
+                    <div class="flex gap-2">
+                        <button id="notification-toggle" onclick="toggleNotifications()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg">
+                            <i class="fas fa-bell mr-2"></i><span id="notification-status">알림 켜기</span>
+                        </button>
+                    </div>
                 </div>
                 <p class="text-gray-300 text-center md:text-left mt-4 border-t border-cyan-900/30 pt-4">
                     <i class="fas fa-star mr-2 text-cyan-400"></i>
@@ -371,6 +376,47 @@ app.get('/', (c) => {
 
             <!-- 투표 섹션 -->
             <div id="content-votes" class="content-section">
+                <!-- 검색 & 필터 -->
+                <div class="mb-6 space-y-4">
+                    <!-- 검색바 -->
+                    <div class="relative">
+                        <input type="text" 
+                               id="vote-search" 
+                               placeholder="투표 제목, 플랫폼으로 검색..." 
+                               class="w-full p-4 pl-12 bg-gray-900/50 border border-cyan-500/30 rounded-lg text-cyan-100 placeholder-gray-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-cyan-500"></i>
+                    </div>
+                    
+                    <!-- 필터 버튼 -->
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="filterVotes('all')" 
+                                id="filter-all" 
+                                class="vote-filter-btn px-4 py-2 rounded-lg bg-cyan-600 text-white font-semibold transition-all">
+                            전체
+                        </button>
+                        <button onclick="filterVotes('deadline')" 
+                                id="filter-deadline" 
+                                class="vote-filter-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 font-semibold transition-all">
+                            마감 임박
+                        </button>
+                        <button onclick="filterVotes('recurring')" 
+                                id="filter-recurring" 
+                                class="vote-filter-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 font-semibold transition-all">
+                            반복 투표
+                        </button>
+                        <button onclick="filterVotes('completed')" 
+                                id="filter-completed" 
+                                class="vote-filter-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 font-semibold transition-all">
+                            완료한 투표
+                        </button>
+                        <button onclick="filterVotes('incomplete')" 
+                                id="filter-incomplete" 
+                                class="vote-filter-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 font-semibold transition-all">
+                            미완료 투표
+                        </button>
+                    </div>
+                </div>
+                
                 <!-- 완료율 표시 -->
                 <div id="completion-stats" class="mb-6"></div>
                 

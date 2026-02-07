@@ -2,6 +2,9 @@
 let currentTab = 'schedule';
 let radioFilter = 'all';
 let isAutoFilling = false;
+let allVotes = []; // 전체 투표 데이터 저장
+let currentVoteFilter = 'all';
+let currentSearchQuery = '';
 
 // 토스트 알림 시스템
 function showToast(message, type = 'success') {
@@ -28,6 +31,140 @@ function showToast(message, type = 'success') {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
+}
+
+// 알림 토글 함수
+async function toggleNotifications() {
+    if (notificationsEnabled) {
+        disableNotifications();
+        document.getElementById('notification-status').textContent = '알림 켜기';
+    } else {
+        const granted = await requestNotificationPermission();
+        if (granted) {
+            document.getElementById('notification-status').textContent = '알림 끄기';
+            checkDeadlineNotifications(); // 즉시 알림 체크
+        }
+    }
+}
+
+// 초기화 시 알림 버튼 상태 업데이트
+function updateNotificationButtonStatus() {
+    const statusElement = document.getElementById('notification-status');
+    if (statusElement && notificationsEnabled) {
+        statusElement.textContent = '알림 끄기';
+    }
+}
+
+// 브라우저 알림 설정
+let notificationsEnabled = localStorage.getItem('notificationsEnabled') === 'true';
+
+// 브라우저 알림 권한 요청
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        showToast('이 브라우저는 알림을 지원하지 않습니다', 'error');
+        return false;
+    }
+    
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = true;
+        localStorage.setItem('notificationsEnabled', 'true');
+        showToast('알림이 활성화되었습니다 🔔', 'success');
+        return true;
+    }
+    
+    if (Notification.permission !== 'denied') {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            notificationsEnabled = true;
+            localStorage.setItem('notificationsEnabled', 'true');
+            showToast('알림이 활성화되었습니다 🔔', 'success');
+            return true;
+        }
+    }
+    
+    showToast('알림 권한이 거부되었습니다', 'error');
+    return false;
+}
+
+// 알림 끄기
+function disableNotifications() {
+    notificationsEnabled = false;
+    localStorage.setItem('notificationsEnabled', 'false');
+    showToast('알림이 비활성화되었습니다 🔕', 'info');
+}
+
+// 마감 임박 알림 체크
+function checkDeadlineNotifications() {
+    if (!notificationsEnabled || !allVotes.length) return;
+    
+    const now = new Date().getTime();
+    const oneHourFromNow = now + (60 * 60 * 1000);
+    const threeHoursFromNow = now + (3 * 60 * 60 * 1000);
+    
+    allVotes.forEach(vote => {
+        if (!vote.deadline) return;
+        
+        const deadlineTime = new Date(vote.deadline).getTime();
+        const timeRemaining = deadlineTime - now;
+        
+        // 1시간 이내 마감 알림
+        if (timeRemaining > 0 && timeRemaining <= oneHourFromNow) {
+            const notifiedKey = `notified_1h_${vote.id}`;
+            if (!localStorage.getItem(notifiedKey)) {
+                new Notification('⏰ 투표 마감 1시간 전!', {
+                    body: `"${vote.title}" 투표가 1시간 이내에 마감됩니다!`,
+                    icon: '/static/icon.svg',
+                    badge: '/static/icon.svg',
+                    tag: `vote-${vote.id}`,
+                    requireInteraction: true
+                });
+                localStorage.setItem(notifiedKey, 'true');
+            }
+        }
+        
+        // 3시간 이내 마감 알림
+        if (timeRemaining > oneHourFromNow && timeRemaining <= threeHoursFromNow) {
+            const notifiedKey = `notified_3h_${vote.id}`;
+            if (!localStorage.getItem(notifiedKey)) {
+                new Notification('🔔 투표 마감 3시간 전', {
+                    body: `"${vote.title}" 투표가 곧 마감됩니다`,
+                    icon: '/static/icon.svg',
+                    badge: '/static/icon.svg',
+                    tag: `vote-${vote.id}`
+                });
+                localStorage.setItem(notifiedKey, 'true');
+            }
+        }
+    });
+}
+
+// SNS 공유 함수
+function shareToSNS(platform, url, title = '') {
+    const shareText = encodeURIComponent(`${title} - PLAVE 투표에 참여하세요!`);
+    const shareUrl = encodeURIComponent(url);
+    let shareLink = '';
+    
+    switch(platform) {
+        case 'twitter':
+            shareLink = `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`;
+            break;
+        case 'facebook':
+            shareLink = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`;
+            break;
+        case 'kakao':
+            // 카카오톡 공유는 SDK 필요, 링크 복사로 대체
+            copyLink(url, title);
+            showToast('카카오톡으로 공유: 링크를 복사했습니다', 'info');
+            return;
+        case 'line':
+            shareLink = `https://social-plugins.line.me/lineit/share?url=${shareUrl}`;
+            break;
+        default:
+            copyLink(url, title);
+            return;
+    }
+    
+    window.open(shareLink, '_blank', 'width=600,height=400');
 }
 
 // 링크 복사 함수
@@ -57,6 +194,125 @@ function copyLink(url, title = '') {
         }
         document.body.removeChild(textArea);
     }
+}
+
+// 투표 필터 함수
+function filterVotes(filterType) {
+    currentVoteFilter = filterType;
+    
+    // 필터 버튼 스타일 업데이트
+    document.querySelectorAll('.vote-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-cyan-600', 'text-white');
+        btn.classList.add('bg-gray-700', 'text-gray-300');
+    });
+    
+    const activeBtn = document.getElementById(`filter-${filterType}`);
+    if (activeBtn) {
+        activeBtn.classList.remove('bg-gray-700', 'text-gray-300');
+        activeBtn.classList.add('bg-cyan-600', 'text-white');
+    }
+    
+    renderFilteredVotes();
+}
+
+// 필터링된 투표 렌더링
+function renderFilteredVotes() {
+    const completedVotes = getCompletedVotes().votes;
+    const now = new Date().getTime();
+    const oneDayFromNow = now + (24 * 60 * 60 * 1000);
+    
+    let filteredVotes = allVotes.filter(vote => {
+        // 검색 필터
+        if (currentSearchQuery) {
+            const titleMatch = vote.title.toLowerCase().includes(currentSearchQuery);
+            const platformMatch = vote.platform && vote.platform.toLowerCase().includes(currentSearchQuery);
+            if (!titleMatch && !platformMatch) return false;
+        }
+        
+        // 타입 필터
+        if (currentVoteFilter === 'deadline') {
+            if (!vote.deadline) return false;
+            const deadlineTime = new Date(vote.deadline).getTime();
+            return deadlineTime <= oneDayFromNow;
+        } else if (currentVoteFilter === 'recurring') {
+            return vote.is_recurring === 1;
+        } else if (currentVoteFilter === 'completed') {
+            return completedVotes.includes(vote.id);
+        } else if (currentVoteFilter === 'incomplete') {
+            return !completedVotes.includes(vote.id);
+        }
+        
+        return true; // 'all'
+    });
+    
+    const votesList = document.getElementById('votes-list');
+    if (filteredVotes.length === 0) {
+        votesList.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8 font-bold">조건에 맞는 투표가 없습니다.</div>';
+        return;
+    }
+    
+    votesList.innerHTML = filteredVotes.map(vote => {
+        const isCompleted = isVoteCompleted(vote.id);
+        const cardOpacity = isCompleted ? 'opacity-60 grayscale' : '';
+        
+        return `
+        <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02] ${cardOpacity}">
+            <div class="flex justify-between items-start mb-3">
+                <div class="flex items-start gap-3 flex-1">
+                    <label class="flex items-center cursor-pointer group">
+                        <input type="checkbox" 
+                               data-vote-checkbox="${vote.id}"
+                               ${isCompleted ? 'checked' : ''}
+                               onchange="toggleVoteComplete(${vote.id})"
+                               class="w-6 h-6 rounded border-2 border-cyan-500 bg-gray-800 checked:bg-cyan-500 checked:border-cyan-500 cursor-pointer transition-all">
+                    </label>
+                    <h3 class="text-xl font-bold text-cyan-300 flex-1 ${isCompleted ? 'line-through' : ''}">${escapeHtml(vote.title)}</h3>
+                </div>
+                <div class="flex gap-2">
+                    <div class="relative group">
+                        <button class="text-purple-400 hover:text-purple-300 transition-colors" title="SNS 공유">
+                            <i class="fas fa-share-alt"></i>
+                        </button>
+                        <div class="hidden group-hover:block absolute right-0 top-8 bg-gray-800 rounded-lg shadow-xl p-2 z-10 min-w-[140px]">
+                            <button onclick="shareToSNS('twitter', '${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
+                                <i class="fab fa-twitter text-blue-400"></i> Twitter
+                            </button>
+                            <button onclick="shareToSNS('facebook', '${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
+                                <i class="fab fa-facebook text-blue-600"></i> Facebook
+                            </button>
+                            <button onclick="shareToSNS('kakao', '${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
+                                <i class="fas fa-comment text-yellow-400"></i> KakaoTalk
+                            </button>
+                            <button onclick="shareToSNS('line', '${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center gap-2 text-sm text-gray-300">
+                                <i class="fab fa-line text-green-500"></i> LINE
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="copyLink('${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="text-green-400 hover:text-green-300 transition-colors" title="링크 복사">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button onclick="editItem('votes', ${vote.id})" class="text-cyan-400 hover:text-cyan-300 transition-colors" title="수정">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteItem('votes', ${vote.id})" class="text-red-400 hover:text-red-300 transition-colors" title="삭제">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500 mb-2">${escapeHtml(vote.platform)}</span>` : ''}
+            ${vote.description ? `<p class="text-gray-300 mb-3">${escapeHtml(vote.description)}</p>` : ''}
+            ${vote.deadline ? `<div class="mb-3" data-deadline="${vote.deadline}">${getCountdownHTML(vote.deadline)}</div>` : ''}
+            <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-3 px-4 rounded-lg hover:shadow-lg transition-all mb-2 font-bold">
+                <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
+            </a>
+            <button onclick="viewTips(${vote.id}, '${escapeHtml(vote.platform || 'General')}')" class="mt-3 text-sm text-purple-400 hover:text-purple-300 font-semibold transition-colors">
+                <i class="fas fa-lightbulb mr-1"></i>이 투표의 팁 보기
+            </button>
+        </div>
+        `;
+    }).join('');
+    
+    updateCompletionStats();
 }
 
 // 카운트다운 타이머 함수
@@ -144,6 +400,130 @@ function isVoteCompleted(voteId) {
     return data.votes.includes(voteId);
 }
 
+// 투표 완료 인증서 생성
+function generateCertificate() {
+    const completedVotesData = getCompletedVotes();
+    const completedIds = completedVotesData.votes;
+    const completedVotes = allVotes.filter(v => completedIds.includes(v.id));
+    
+    if (completedVotes.length === 0) {
+        showToast('완료한 투표가 없습니다', 'info');
+        return;
+    }
+    
+    // 닉네임 입력 프롬프트
+    const nickname = prompt('닉네임을 입력하세요:', 'PLLI');
+    if (!nickname) return;
+    
+    // Canvas 생성
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 1600;
+    const ctx = canvas.getContext('2d');
+    
+    // 배경 그라데이션
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#0f172a');
+    gradient.addColorStop(0.5, '#1e293b');
+    gradient.addColorStop(1, '#0f172a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 테두리
+    ctx.strokeStyle = '#06b6d4';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+    
+    // 내부 테두리
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 5;
+    ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+    
+    // 제목
+    ctx.fillStyle = '#06b6d4';
+    ctx.font = 'bold 72px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🏆 투표 완료 인증서', canvas.width / 2, 150);
+    
+    // PLAVE PLLI 로고
+    ctx.fillStyle = '#a855f7';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.fillText('PLAVE PLLI Community', canvas.width / 2, 220);
+    
+    // 닉네임
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 56px sans-serif';
+    ctx.fillText(nickname, canvas.width / 2, 320);
+    
+    // 설명 텍스트
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '32px sans-serif';
+    ctx.fillText(`${new Date().toLocaleDateString('ko-KR')}`, canvas.width / 2, 380);
+    
+    // 완료 개수
+    ctx.fillStyle = '#22d3ee';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.fillText(`총 ${completedVotes.length}개의 투표 완료!`, canvas.width / 2, 480);
+    
+    // 투표 목록
+    ctx.textAlign = 'left';
+    ctx.font = '28px sans-serif';
+    let y = 580;
+    
+    completedVotes.slice(0, 15).forEach((vote, index) => {
+        ctx.fillStyle = '#cbd5e1';
+        const text = `${index + 1}. ${vote.title}`;
+        const maxWidth = canvas.width - 160;
+        
+        // 텍스트가 너무 길면 줄임
+        let displayText = text;
+        if (ctx.measureText(text).width > maxWidth) {
+            let truncated = text;
+            while (ctx.measureText(truncated + '...').width > maxWidth && truncated.length > 0) {
+                truncated = truncated.slice(0, -1);
+            }
+            displayText = truncated + '...';
+        }
+        
+        ctx.fillText(displayText, 80, y);
+        y += 50;
+    });
+    
+    if (completedVotes.length > 15) {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'italic 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`그 외 ${completedVotes.length - 15}개 투표`, canvas.width / 2, y + 20);
+    }
+    
+    // 워터마크
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.font = 'bold 120px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(-Math.PI / 6);
+    ctx.fillText('PLAVE PLLI', 0, 0);
+    ctx.restore();
+    
+    // 하단 텍스트
+    ctx.fillStyle = '#06b6d4';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('플리들의 든든한 투표 활동을 응원합니다!', canvas.width / 2, canvas.height - 100);
+    
+    // 다운로드
+    canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `PLAVE_투표인증_${nickname}_${new Date().toISOString().split('T')[0]}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('🎉 인증서가 다운로드되었습니다!', 'success');
+    }, 'image/png');
+}
+
 function toggleVoteComplete(voteId) {
     const data = getCompletedVotes();
     const index = data.votes.indexOf(voteId);
@@ -159,8 +539,7 @@ function toggleVoteComplete(voteId) {
     saveCompletedVotes(data.votes);
     
     // UI 업데이트
-    updateVoteCheckbox(voteId, index === -1);
-    updateCompletionStats();
+    renderFilteredVotes();
     
     // 토스트 알림
     if (index === -1) {
@@ -204,14 +583,23 @@ function updateCompletionStats() {
     
     statsEl.innerHTML = `
         <div class="bg-gradient-to-r from-cyan-900/30 to-purple-900/30 rounded-lg p-4 border border-cyan-500/30">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-cyan-300 font-bold">오늘의 투표 진행률</span>
-                <span class="text-2xl font-bold text-cyan-300">${completed}/${totalVotes}</span>
+            <div class="flex items-center justify-between mb-2 flex-wrap gap-3">
+                <div class="flex-1">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-cyan-300 font-bold">오늘의 투표 진행률</span>
+                        <span class="text-2xl font-bold text-cyan-300">${completed}/${totalVotes}</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                        <div class="bg-gradient-to-r from-cyan-500 to-purple-500 h-full transition-all duration-500" style="width: ${percentage}%"></div>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-2">🎯 ${percentage}% 완료!</p>
+                </div>
+                ${completed > 0 ? `
+                <button onclick="generateCertificate()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg whitespace-nowrap">
+                    <i class="fas fa-certificate mr-2"></i>인증서 생성
+                </button>
+                ` : ''}
             </div>
-            <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
-                <div class="bg-gradient-to-r from-cyan-500 to-purple-500 h-full transition-all duration-500" style="width: ${percentage}%"></div>
-            </div>
-            <p class="text-sm text-gray-400 mt-2">🎯 ${percentage}% 완료!</p>
         </div>
     `;
 }
@@ -224,8 +612,23 @@ document.addEventListener('DOMContentLoaded', () => {
     loadRadio();
     loadTips();
     
+    // 알림 버튼 상태 업데이트
+    updateNotificationButtonStatus();
+    
+    // 알림 체크 (10분마다)
+    setInterval(checkDeadlineNotifications, 10 * 60 * 1000);
+    
     // 카운트다운 타이머 시작
     startCountdownUpdates();
+    
+    // 검색 이벤트 리스너
+    const searchInput = document.getElementById('vote-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            currentSearchQuery = e.target.value.toLowerCase();
+            renderFilteredVotes();
+        });
+    }
 });
 
 // 탭 전환
@@ -417,53 +820,10 @@ async function loadSchedule() {
 async function loadVotes() {
     try {
         const response = await axios.get('/api/votes');
-        const votes = response.data.data;
+        allVotes = response.data.data; // 전역 변수에 저장
         
-        const votesList = document.getElementById('votes-list');
-        votesList.innerHTML = votes.map(vote => {
-            const isCompleted = isVoteCompleted(vote.id);
-            const cardOpacity = isCompleted ? 'opacity-60 grayscale' : '';
-            
-            return `
-            <div class="card rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-[1.02] ${cardOpacity}">
-                <div class="flex justify-between items-start mb-3">
-                    <div class="flex items-start gap-3 flex-1">
-                        <label class="flex items-center cursor-pointer group">
-                            <input type="checkbox" 
-                                   data-vote-checkbox="${vote.id}"
-                                   ${isCompleted ? 'checked' : ''}
-                                   onchange="toggleVoteComplete(${vote.id})"
-                                   class="w-6 h-6 rounded border-2 border-cyan-500 bg-gray-800 checked:bg-cyan-500 checked:border-cyan-500 cursor-pointer transition-all">
-                        </label>
-                        <h3 class="text-xl font-bold text-cyan-300 flex-1 ${isCompleted ? 'line-through' : ''}">${escapeHtml(vote.title)}</h3>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="copyLink('${escapeHtml(vote.vote_url)}', '${escapeHtml(vote.title)}')" class="text-green-400 hover:text-green-300 transition-colors" title="링크 복사">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                        <button onclick="editItem('votes', ${vote.id})" class="text-cyan-400 hover:text-cyan-300 transition-colors" title="수정">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="deleteItem('votes', ${vote.id})" class="text-red-400 hover:text-red-300 transition-colors" title="삭제">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                ${vote.platform ? `<span class="badge bg-cyan-900/50 text-cyan-300 border-cyan-500 mb-2">${escapeHtml(vote.platform)}</span>` : ''}
-                ${vote.description ? `<p class="text-gray-300 mb-3">${escapeHtml(vote.description)}</p>` : ''}
-                ${vote.deadline ? `<div class="mb-3" data-deadline="${vote.deadline}">${getCountdownHTML(vote.deadline)}</div>` : ''}
-                <a href="${escapeHtml(vote.vote_url)}" target="_blank" class="block cyber-link text-white text-center py-3 px-4 rounded-lg hover:shadow-lg transition-all mb-2 font-bold">
-                    <i class="fas fa-external-link-alt mr-2"></i>투표하러 가기
-                </a>
-                <button onclick="viewTips(${vote.id}, '${escapeHtml(vote.platform || 'General')}')" class="mt-3 text-sm text-purple-400 hover:text-purple-300 font-semibold transition-colors">
-                    <i class="fas fa-lightbulb mr-1"></i>이 투표의 팁 보기
-                </button>
-            </div>
-            `;
-        }).join('') || '<div class="col-span-full text-center text-gray-400 py-8 font-bold">등록된 투표가 없습니다.</div>';
-        
-        // 완료율 업데이트
-        updateCompletionStats();
+        // 필터링된 투표 렌더링
+        renderFilteredVotes();
     } catch (error) {
         console.error('투표 로드 실패:', error);
     }
