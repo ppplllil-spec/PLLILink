@@ -124,13 +124,7 @@ votes.put('/:id', async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { title, description, vote_url, deadline, platform, session_token, password } = body
-    
-    // 권한 확인
-    const permission = await checkPermission(c.env.DB, id, session_token, password)
-    if (!permission.allowed) {
-      return c.json({ success: false, error: '수정 권한이 없습니다.' }, 403)
-    }
+    const { title, description, vote_url, deadline, platform } = body
     
     const result = await c.env.DB.prepare(`
       UPDATE votes 
@@ -153,14 +147,6 @@ votes.put('/:id', async (c) => {
 votes.delete('/:id', async (c) => {
   try {
     const id = c.req.param('id')
-    const body = await c.req.json()
-    const { session_token, password } = body
-    
-    // 권한 확인
-    const permission = await checkPermission(c.env.DB, id, session_token, password)
-    if (!permission.allowed) {
-      return c.json({ success: false, error: '삭제 권한이 없습니다.' }, 403)
-    }
     
     const result = await c.env.DB.prepare(`
       DELETE FROM votes WHERE id = ?
