@@ -97,3 +97,57 @@ function getRadioTemplate(station, artist, song) {
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => showToast('📋 복사 완료!')); }
 function showToast(msg) { /* 토스트 UI 로직 */ }
 function updateNotificationButtonStatus() { /* 알림 버튼 UI 로직 */ }
+
+// [기능 1] 투표 로드 함수
+async function loadVotes() {
+    const container = document.getElementById('votes-list');
+    if (!container) return;
+
+    try {
+        const res = await axios.get('/api/votes'); // 위에서 만든 서버 통로 호출
+        const votesData = res.data.data;
+
+        // 투표 완료 기록 불러오기 (로컬 저장소)
+        const completed = JSON.parse(localStorage.getItem('completed_votes') || '[]');
+
+        container.innerHTML = votesData.map(v => {
+            const isDone = completed.includes(v.id);
+            return `
+                <div class="card p-5 rounded-2xl border ${isDone ? 'border-gray-700 opacity-60' : 'border-cyan-500/20'} transition-all">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" onclick="toggleVote('${v.id}')" ${isDone ? 'checked' : ''} 
+                                   class="w-5 h-5 rounded border-cyan-500 bg-gray-900 checked:bg-cyan-500 cursor-pointer">
+                            <span class="badge text-cyan-400 border-cyan-500/30 text-[10px]">${v.platform}</span>
+                        </div>
+                        <span class="text-[10px] text-gray-500">마감: ${v.deadline || '상시'}</span>
+                    </div>
+                    
+                    <h4 class="text-lg font-black text-white mb-4 ${isDone ? 'line-through text-gray-500' : ''}">${v.title}</h4>
+                    
+                    <div class="flex gap-2">
+                        <a href="${v.link}" target="_blank" class="flex-1 text-center py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold transition-all">투표하기</a>
+                        <button onclick="shareToX('${v.title}', '${v.link}')" class="px-3 py-2 bg-gray-800 rounded-lg text-blue-400 border border-gray-700 hover:border-blue-400 transition-all">
+                            <i class="fab fa-twitter"></i>
+                        </button>
+                    </div>
+                </div>`;
+        }).join('');
+
+    } catch (err) {
+        container.innerHTML = '<p class="text-center text-gray-500 py-10">투표 정보를 불러오는 중 에러가 발생했습니다.</p>';
+    }
+}
+
+// [기능 1] 투표 완료 체크 로직
+function toggleVote(id) {
+    let completed = JSON.parse(localStorage.getItem('completed_votes') || '[]');
+    if (completed.includes(id)) {
+        completed = completed.filter(v => v !== id);
+    } else {
+        completed.push(id);
+        showToast('💙 투표 완료! 진행률이 업데이트되었습니다.');
+    }
+    localStorage.setItem('completed_votes', JSON.stringify(completed));
+    loadVotes(); // 화면 새로고침
+}
