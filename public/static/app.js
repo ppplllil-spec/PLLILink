@@ -184,7 +184,41 @@ async function loadAds() {
         console.error('광고 로드 실패:', e); 
     }
 }
+// 1. 새 정보 추가 모달 열기 함수
+function openAddModal() {
+    const modal = document.getElementById('add-modal');
+    const formContent = document.getElementById('form-content');
+    if (!modal || !formContent) return;
 
+    // 현재 선택된 탭에 따라 입력 폼을 다르게 구성합니다
+    let fields = '';
+    if (currentTab === 'votes') {
+        fields = `
+            <input type="text" name="category" placeholder="플랫폼 (예: 뮤빗)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
+            <input type="text" name="title" placeholder="투표 제목" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
+            <input type="text" name="link" placeholder="투표 링크 주소" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
+            <input type="text" name="deadline" placeholder="마감 기한 (YYYY-MM-DD)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white">
+        `;
+    } else if (currentTab === 'radio') {
+        fields = `
+            <input type="text" name="category" placeholder="방송사명 (예: MBC)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
+            <input type="text" name="title" placeholder="프로그램명 또는 제목" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
+            <input type="text" name="link" placeholder="신청 게시판 링크" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
+            <textarea name="description" placeholder="사연 예시문 내용" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white h-32"></textarea>
+        `;
+    } else {
+        fields = `<p class="text-gray-400 text-center py-4">이 섹션은 관리자 페이지에서 추가 가능합니다.</p>`;
+    }
+
+    formContent.innerHTML = fields;
+    modal.classList.remove('hidden');
+}
+
+// 2. 모달 닫기 함수
+function closeAddModal() {
+    const modal = document.getElementById('add-modal');
+    if (modal) modal.classList.add('hidden');
+}
 // 7. 유틸리티
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => showToast('📋 문구가 복사되었습니다!')); }
 function shareToX(title, url) { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('🗳️ [PLAVE VOTE]\n' + title)}&url=${encodeURIComponent(url)}`, '_blank'); }
