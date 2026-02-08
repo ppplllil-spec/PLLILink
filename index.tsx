@@ -119,7 +119,7 @@ app.route('/api/radio-requests', radioRequests)
 app.route('/api/tips', tips)
 app.route('/api/utils', utils)
 app.route('/api/schedule', schedule)
-app.route('/api/radio-templates', radioTemplates)
+app.route('/api/radio-requests', radioRequests)
 
 // 메인 페이지
 app.get('/', (c) => {
@@ -950,7 +950,7 @@ async function renderRadioSection() {
     const exampleList = document.getElementById('example-text-list');
 
     try {
-        const res = await axios.get('/api/radio-requests?type=radioRequests');
+        const res = await axios.get('/api/radio-requests?type=radioRequests'); 
         allRadioData = res.data.data; // 데이터를 전역 변수에 저장
 
         // 1. '예시문'과 '일반 라디오' 데이터 분리
