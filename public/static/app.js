@@ -185,16 +185,6 @@ async function loadAds() {
     }
 }
 
-// 6. 유튜브 로직 복구 (북마크 포함)
-window.loadYoutube = async function() {
-    const container = document.getElementById('youtube-list');
-    if (!container) return;
-    try {
-        // 실제 연동 시 API 주소 확인 필요
-        container.innerHTML = `<div class="col-span-full p-8 text-center text-gray-400 border border-dashed border-white/10 rounded-2xl">준비 중인 섹션입니다. 공식 채널을 확인해 주세요.</div>`;
-    } catch (e) { console.error(e); }
-}
-
 // 7. 유틸리티
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => showToast('📋 문구가 복사되었습니다!')); }
 function shareToX(title, url) { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('🗳️ [PLAVE VOTE]\n' + title)}&url=${encodeURIComponent(url)}`, '_blank'); }
@@ -220,5 +210,4 @@ function switchTab(tab) {
     if (target) target.classList.remove('hidden');
     if (tab === 'radio') renderRadioSection();
     if (tab === 'votes') loadVotes();
-    if (tab === 'youtube') loadYoutube();
 }
