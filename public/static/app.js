@@ -1,5 +1,5 @@
 /**
- * PLAVE PLLI Community - 최종 통합 관리 스크립트 (기능 100% 통합)
+ * PLAVE PLLI Community - 최종 통합 관리 스크립트 (기능 100% 통합 + 알림 기능)
  */
 
 // 1. 전역 상태 및 설정
@@ -29,13 +29,16 @@ async function initApp() {
     await loadVotes();          // 투표 가이드
     await loadAds();            // 광고 시안
     
-    // URL 파라미터 체크 (예: ?tab=radio 이면 해당 탭으로 바로 이동)
+    // 알림 버튼 상태 초기화 (추가됨)
+    updateNotificationButtonStatus();
+
+    // URL 파라미터 체크
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
     if (tab) switchTab(tab);
 }
 
-// 3. 투표 섹션 (체크박스 및 SNS 공유 통합)
+// 3. 투표 섹션
 async function loadVotes() {
     try {
         const res = await axios.get('/api/votes?type=votes');
@@ -69,7 +72,7 @@ function renderVotes() {
     }).join('') || '<p class="col-span-full text-center text-gray-500 py-10">등록된 투표가 없습니다.</p>';
 }
 
-// 4. 라디오 섹션 (탭 필터링 및 공백 제거 통합)
+// 4. 라디오 섹션
 async function renderRadioSection() {
     const tabContainer = document.getElementById('radio-station-tabs');
     const exampleList = document.getElementById('example-text-list');
@@ -90,7 +93,7 @@ async function renderRadioSection() {
             <div class="card p-4 rounded-xl border border-purple-500/30 bg-purple-900/5">
                 <h4 class="text-purple-400 font-bold mb-1">${text.title}</h4>
                 <p class="text-sm text-gray-300 mb-4">${text.description}</p>
-                <button onclick="copyToClipboard('${text.description.replace(/\n/g, '\\n')}')" class="w-full py-2 bg-purple-600/30 text-purple-200 rounded-lg text-xs font-bold transition-all">사연 복사하기</button>
+                <button onclick="copyToClipboard('${text.description.replace(/\n/g, '\\\\n')}')" class="w-full py-2 bg-purple-600/30 text-purple-200 rounded-lg text-xs font-bold transition-all">사연 복사하기</button>
             </div>`).join('');
 
         if (uniqueStations.length > 0) filterRadioByStation(uniqueStations[0]);
@@ -113,7 +116,7 @@ function filterRadioByStation(stationName) {
         </div>`).join('');
 }
 
-// 5. 일정 및 광고 (영문 헤더 매칭)
+// 5. 일정 및 광고
 async function loadSchedule() {
     const deadlineBox = document.getElementById('today-deadline-votes');
     if (!deadlineBox) return;
@@ -148,13 +151,13 @@ async function loadAds() {
     } catch (e) { console.error('광고 로드 실패', e); }
 }
 
-// 6. 모달 제어 (섹션별 필드 자동 생성)
+// 6. 모달 제어 (섹션 감지 로직 강화)
 function openAddModal() {
     const modal = document.getElementById('add-modal');
     const formContent = document.getElementById('form-content');
     if (!modal || !formContent) return;
     
-/ 현재 어느 탭이 열려있는지 확인
+    // 현재 활성화된 탭 섹션을 직접 확인하여 에러 방지
     let activeTab = currentTab; 
     if (document.getElementById('content-votes') && !document.getElementById('content-votes').classList.contains('hidden')) activeTab = 'votes';
     if (document.getElementById('content-radio') && !document.getElementById('content-radio').classList.contains('hidden')) activeTab = 'radio';
@@ -183,10 +186,10 @@ function closeAddModal() {
     if (modal) modal.classList.add('hidden');
 }
 
-// 7. 유틸리티 (복사, 공유, 토스트, 탭 전환)
+// 7. 유틸리티 (알림 토글 기능 포함)
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => showToast('📋 문구가 복사되었습니다!')); }
 
-function shareToX(title, url) { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('🗳️ [PLAVE VOTE]\n' + title + '\n지금 바로 참여하세요! ✨\n\n#PLAVE #플레이브 #PLLI #플리')}&url=${encodeURIComponent(url)}`, '_blank'); }
+function shareToX(title, url) { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('🗳️ [PLAVE VOTE]\\n' + title + '\\n지금 바로 참여하세요! ✨\\n\\n#PLAVE #플레이브 #PLLI #플리')}&url=${encodeURIComponent(url)}`, '_blank'); }
 
 function toggleVote(voteId) {
     let completed = JSON.parse(localStorage.getItem('completed_votes') || '[]');
@@ -202,7 +205,6 @@ function switchTab(tab) {
     const target = document.getElementById(`content-${tab}`);
     if (target) target.classList.remove('hidden');
     
-    // 버튼 스타일 업데이트
     document.querySelectorAll('[id^="tab-"]').forEach(btn => btn.classList.remove('tab-active', 'text-cyan-300'));
     const activeBtn = document.getElementById(`tab-${tab}`);
     if (activeBtn) activeBtn.classList.add('tab-active', 'text-cyan-300');
@@ -228,7 +230,41 @@ function checkMemberAnniversaries() {
         banner.classList.remove('hidden');
     }
 }
+
+// 8. 알림 기능 (살려냈습니다! 🔥)
+async function toggleNotifications() {
+    if (!('Notification' in window)) {
+        showToast('❌ 이 브라우저는 알림을 지원하지 않습니다.');
+        return;
+    }
+
+    if (Notification.permission === 'granted') {
+        showToast('🔔 알림이 이미 활성화되어 있습니다.');
+    } else {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            showToast('✅ 이제 투표 마감 알림을 보내드릴게요!');
+        } else {
+            showToast('🔕 알림이 거부되었습니다.');
+        }
+    }
+    updateNotificationButtonStatus();
+}
+
 function updateNotificationButtonStatus() {
-    console.log("알림 상태 확인 중...");
-    // 기능이 당장 필요 없다면 이렇게 비워두기만 해도 에러가 사라집니다.
+    const statusText = document.getElementById('notification-status');
+    if (!statusText) return;
+
+    if (!('Notification' in window)) {
+        statusText.innerText = '알림 미지원';
+        return;
+    }
+
+    if (Notification.permission === 'granted') {
+        statusText.innerText = '알림 활성 중';
+    } else if (Notification.permission === 'denied') {
+        statusText.innerText = '알림 차단됨';
+    } else {
+        statusText.innerText = '알림 켜기';
+    }
 }
