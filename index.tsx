@@ -115,7 +115,7 @@ self.addEventListener('activate', (event) => {
 // API 라우트
 app.route('/api/votes', votes)
 app.route('/api/ad-requests', adRequests)
-app.route('/api/radio-requests', radioRequests)
+app.route('/api/radio-requests', radioRequests) // [필수] 하이픈(-) 확인!
 app.route('/api/tips', tips)
 app.route('/api/utils', utils)
 app.route('/api/schedule', schedule)
