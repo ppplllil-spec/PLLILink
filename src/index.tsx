@@ -592,4 +592,381 @@ app.get('/', (c) => {
   `)
 })
 
+// 대시보드 페이지 (ASTERUM STATION)
+app.get('/dashboard', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>PLAVE PLLI DASHBOARD</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+          body {
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1426 100%);
+            min-height: 100vh;
+            color: #fff;
+          }
+          
+          .glass-panel {
+            backdrop-filter: blur(20px);
+            background: linear-gradient(135deg, rgba(15, 20, 38, 0.9) 0%, rgba(26, 31, 58, 0.85) 100%);
+            border: 1px solid rgba(0, 191, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 191, 255, 0.1);
+          }
+          
+          .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            background: rgba(55, 65, 81, 0.5);
+            color: #d1d5db;
+            border: 1px solid rgba(107, 114, 128, 0.3);
+          }
+          
+          .tab-btn.active {
+            background: linear-gradient(135deg, rgba(0, 191, 255, 0.2), rgba(138, 43, 226, 0.2));
+            border: 1px solid rgba(0, 191, 255, 0.5);
+            color: #00bfff;
+          }
+          
+          .content-section {
+            display: none;
+          }
+          
+          .content-section.active {
+            display: block;
+          }
+        </style>
+    </head>
+    <body>
+        <div id="anniversary-banner" class="hidden"></div>
+
+        <header class="p-4 flex justify-between items-center glass-panel mb-4">
+            <h1 class="text-xl font-black italic text-cyan-400">ASTERUM STATION</h1>
+            <div class="flex gap-2">
+                <button id="admin-switch" onclick="toggleAdminMode()" class="bg-gray-800 text-[10px] px-3 py-1 rounded-full border border-gray-600 hover:border-cyan-500 transition-all">
+                    ADMIN: <span id="admin-status">OFF</span>
+                </button>
+                <button onclick="openSongManager()" class="bg-purple-900/50 text-[10px] px-3 py-1 rounded-full border border-purple-500/50 hover:border-purple-400 transition-all" id="song-manager-btn">
+                    🎵 곡 관리
+                </button>
+            </div>
+        </header>
+
+        <nav class="flex gap-2 p-4 overflow-x-auto">
+            <button id="tab-schedule" onclick="switchTab('schedule')" class="tab-btn active">오늘의 일정</button>
+            <button id="tab-votes" onclick="switchTab('votes')" class="tab-btn">투표 가이드</button>
+            <button id="tab-radio" onclick="switchTab('radio')" class="tab-btn">라디오 신청</button>
+            <button id="tab-youtube" onclick="switchTab('youtube')" class="tab-btn">PLAVE유튭</button>
+        </nav>
+
+        <main class="p-4">
+            <div id="content-schedule" class="content-section active">
+                <div id="today-schedule-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- 동적 로딩 -->
+                </div>
+            </div>
+            
+            <div id="content-votes" class="content-section">
+                <div id="votes-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- 동적 로딩 -->
+                </div>
+            </div>
+            
+            <div id="content-radio" class="content-section">
+                <div id="radio-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- 동적 로딩 -->
+                </div>
+            </div>
+            
+            <div id="content-youtube" class="content-section">
+                <div class="glass-panel p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold text-cyan-400 mb-4">
+                        <i class="fab fa-youtube mr-2"></i>PLAVE 유튜브 채널
+                    </h2>
+                    <p class="text-gray-300 mb-4">PLAVE 공식 유튜브 채널의 최신 영상을 확인하세요!</p>
+                    <a href="https://www.youtube.com/@PLAVE_official" target="_blank" class="inline-block bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition-all">
+                        <i class="fab fa-youtube mr-2"></i>유튜브 바로가기
+                    </a>
+                </div>
+            </div>
+        </main>
+
+        <!-- 인증 모달 -->
+        <div id="proof-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+            <div class="glass-panel p-6 max-w-sm w-full rounded-xl">
+                <h3 class="text-xl font-bold text-cyan-400 mb-4">
+                    <i class="fas fa-camera mr-2"></i>투표 인증하기
+                </h3>
+                <canvas id="proof-canvas" class="w-full rounded-lg mb-4 bg-white"></canvas>
+                <input type="text" id="watermark-input" placeholder="예 : PLLI 닉네임" class="w-full p-3 rounded-lg mb-4 text-black border border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                <div class="flex gap-2">
+                    <button onclick="generateProof()" class="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg font-bold transition-all">
+                        생성하기
+                    </button>
+                    <button onclick="closeProof()" class="flex-1 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg font-bold transition-all">
+                        닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script src="/static/dashboard.js"></script>
+        <script>
+          // 전역 변수
+          let isAdminMode = false;
+          let currentTab = 'schedule';
+          
+          // ADMIN 모드 토글
+          function toggleAdminMode() {
+            isAdminMode = !isAdminMode;
+            const statusEl = document.getElementById('admin-status');
+            const songBtn = document.getElementById('song-manager-btn');
+            
+            if (isAdminMode) {
+              statusEl.textContent = 'ON';
+              statusEl.classList.add('text-cyan-400');
+              songBtn.classList.remove('hidden');
+            } else {
+              statusEl.textContent = 'OFF';
+              statusEl.classList.remove('text-cyan-400');
+            }
+            
+            console.log('Admin mode:', isAdminMode);
+          }
+          
+          // 곡 관리 모달 열기
+          function openSongManager() {
+            if (!isAdminMode) {
+              alert('관리자 모드를 먼저 활성화해주세요.');
+              return;
+            }
+            alert('곡 관리 기능은 개발 중입니다.');
+          }
+          
+          // 탭 전환
+          function switchTab(tab) {
+            currentTab = tab;
+            
+            // 모든 탭 버튼 비활성화
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+              btn.classList.remove('active');
+            });
+            
+            // 선택된 탭 활성화
+            document.getElementById(\`tab-\${tab}\`).classList.add('active');
+            
+            // 모든 콘텐츠 숨기기
+            document.querySelectorAll('.content-section').forEach(section => {
+              section.classList.remove('active');
+            });
+            
+            // 선택된 콘텐츠 표시
+            document.getElementById(\`content-\${tab}\`).classList.add('active');
+            
+            // 데이터 로드
+            loadTabData(tab);
+          }
+          
+          // 탭별 데이터 로드
+          async function loadTabData(tab) {
+            try {
+              if (tab === 'schedule') {
+                const response = await axios.get('/api/schedule/today');
+                renderSchedule(response.data.data);
+              } else if (tab === 'votes') {
+                const response = await axios.get('/api/votes');
+                renderVotes(response.data.data);
+              } else if (tab === 'radio') {
+                const response = await axios.get('/api/radio-requests');
+                renderRadio(response.data.data);
+              }
+            } catch (error) {
+              console.error('Failed to load data:', error);
+            }
+          }
+          
+          // 스케줄 렌더링
+          function renderSchedule(data) {
+            const container = document.getElementById('today-schedule-content');
+            if (!data || (!data.deadlineVotes?.length && !data.recurringVotes?.length && !data.radioRequests?.length)) {
+              container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">오늘 일정이 없습니다.</div>';
+              return;
+            }
+            
+            let html = '';
+            
+            // 마감 투표
+            if (data.deadlineVotes?.length) {
+              html += '<div class="col-span-full"><h3 class="text-lg font-bold text-cyan-400 mb-2">📅 오늘 마감 투표</h3></div>';
+              data.deadlineVotes.forEach(vote => {
+                html += \`
+                  <div class="glass-panel p-4 rounded-lg">
+                    <h4 class="font-bold text-cyan-300 mb-2">\${vote.title}</h4>
+                    <p class="text-sm text-gray-400 mb-2">\${vote.platform || '플랫폼 정보 없음'}</p>
+                    <a href="\${vote.vote_url}" target="_blank" class="inline-block bg-cyan-600 hover:bg-cyan-500 text-white text-sm py-1 px-3 rounded transition-all">
+                      투표하기
+                    </a>
+                  </div>
+                \`;
+              });
+            }
+            
+            // 반복 투표
+            if (data.recurringVotes?.length) {
+              html += '<div class="col-span-full mt-4"><h3 class="text-lg font-bold text-purple-400 mb-2">🔄 매일 반복 투표</h3></div>';
+              data.recurringVotes.forEach(vote => {
+                html += \`
+                  <div class="glass-panel p-4 rounded-lg">
+                    <h4 class="font-bold text-purple-300 mb-2">\${vote.title}</h4>
+                    <p class="text-sm text-gray-400 mb-2">\${vote.platform || '플랫폼 정보 없음'}</p>
+                    <a href="\${vote.vote_url}" target="_blank" class="inline-block bg-purple-600 hover:bg-purple-500 text-white text-sm py-1 px-3 rounded transition-all">
+                      투표하기
+                    </a>
+                  </div>
+                \`;
+              });
+            }
+            
+            // 라디오 요청
+            if (data.radioRequests?.length) {
+              html += '<div class="col-span-full mt-4"><h3 class="text-lg font-bold text-green-400 mb-2">📻 오늘 라디오 신청</h3></div>';
+              data.radioRequests.forEach(radio => {
+                html += \`
+                  <div class="glass-panel p-4 rounded-lg">
+                    <h4 class="font-bold text-green-300 mb-2">\${radio.station_name}</h4>
+                    <p class="text-sm text-gray-400 mb-2">\${radio.program_name || '프로그램 정보 없음'}</p>
+                    \${radio.request_url ? \`
+                      <a href="\${radio.request_url}" target="_blank" class="inline-block bg-green-600 hover:bg-green-500 text-white text-sm py-1 px-3 rounded transition-all">
+                        신청하기
+                      </a>
+                    \` : ''}
+                  </div>
+                \`;
+              });
+            }
+            
+            container.innerHTML = html;
+          }
+          
+          // 투표 렌더링
+          function renderVotes(votes) {
+            const container = document.getElementById('votes-list');
+            if (!votes || !votes.length) {
+              container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">등록된 투표가 없습니다.</div>';
+              return;
+            }
+            
+            container.innerHTML = votes.map(vote => \`
+              <div class="glass-panel p-4 rounded-lg">
+                <h4 class="font-bold text-cyan-300 mb-2">\${vote.title}</h4>
+                <p class="text-sm text-gray-400 mb-2">\${vote.platform || '플랫폼 정보 없음'}</p>
+                \${vote.description ? \`<p class="text-sm text-gray-500 mb-2">\${vote.description}</p>\` : ''}
+                <div class="flex gap-2">
+                  <a href="\${vote.vote_url}" target="_blank" class="flex-1 text-center bg-cyan-600 hover:bg-cyan-500 text-white text-sm py-2 rounded transition-all">
+                    투표하기
+                  </a>
+                  <button onclick="openProof()" class="bg-purple-600 hover:bg-purple-500 text-white text-sm py-2 px-3 rounded transition-all">
+                    인증
+                  </button>
+                </div>
+              </div>
+            \`).join('');
+          }
+          
+          // 라디오 렌더링
+          function renderRadio(radios) {
+            const container = document.getElementById('radio-list');
+            if (!radios || !radios.length) {
+              container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">등록된 라디오가 없습니다.</div>';
+              return;
+            }
+            
+            container.innerHTML = radios.map(radio => \`
+              <div class="glass-panel p-4 rounded-lg">
+                <h4 class="font-bold text-green-300 mb-2">\${radio.station_name}</h4>
+                <p class="text-sm text-gray-400 mb-2">\${radio.program_name || '프로그램 정보 없음'}</p>
+                \${radio.description ? \`<p class="text-sm text-gray-500 mb-2">\${radio.description}</p>\` : ''}
+                \${radio.request_url ? \`
+                  <a href="\${radio.request_url}" target="_blank" class="inline-block bg-green-600 hover:bg-green-500 text-white text-sm py-2 px-4 rounded transition-all">
+                    신청하기
+                  </a>
+                \` : ''}
+              </div>
+            \`).join('');
+          }
+          
+          // 인증 모달 열기
+          function openProof() {
+            document.getElementById('proof-modal').classList.remove('hidden');
+          }
+          
+          // 인증 모달 닫기
+          function closeProof() {
+            document.getElementById('proof-modal').classList.add('hidden');
+          }
+          
+          // 인증서 생성
+          function generateProof() {
+            const watermark = document.getElementById('watermark-input').value || 'PLLI';
+            const canvas = document.getElementById('proof-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 캔버스 크기 설정
+            canvas.width = 400;
+            canvas.height = 500;
+            
+            // 배경
+            ctx.fillStyle = '#0a0e27';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 제목
+            ctx.fillStyle = '#00bfff';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('PLAVE 투표 인증', canvas.width / 2, 60);
+            
+            // 워터마크
+            ctx.fillStyle = '#8a2be2';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText(watermark, canvas.width / 2, 120);
+            
+            // 날짜
+            const today = new Date().toLocaleDateString('ko-KR');
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '18px Arial';
+            ctx.fillText(today, canvas.width / 2, 160);
+            
+            // 인증 메시지
+            ctx.fillStyle = '#d1d5db';
+            ctx.font = '16px Arial';
+            ctx.fillText('오늘도 투표 완료!', canvas.width / 2, 220);
+            ctx.fillText('플리들 화이팅! 💜', canvas.width / 2, 250);
+            
+            // 다운로드
+            const link = document.createElement('a');
+            link.download = \`PLAVE_투표인증_\${watermark}_\${today}.png\`;
+            link.href = canvas.toDataURL();
+            link.click();
+            
+            alert('인증서가 다운로드되었습니다!');
+            closeProof();
+          }
+          
+          // 초기 로드
+          document.addEventListener('DOMContentLoaded', () => {
+            loadTabData('schedule');
+          });
+        </script>
+    </body>
+    </html>
+  `)
+})
+
 export default app

@@ -1,1 +1,24 @@
 h1 { font-family: Arial, Helvetica, sans-serif; }
+/* 텍스트 넘침 방지 클래스 */
+.truncate-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+/* 두 줄 제한 처리 */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vote-card {
+    height: 140px; /* 카드 높이 통일 */
+}
+
+.truncate-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
