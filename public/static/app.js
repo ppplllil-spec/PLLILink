@@ -153,23 +153,27 @@ function openAddModal() {
     const modal = document.getElementById('add-modal');
     const formContent = document.getElementById('form-content');
     if (!modal || !formContent) return;
-
+    
+/ 현재 어느 탭이 열려있는지 확인
+    let activeTab = currentTab; 
+    if (document.getElementById('content-votes') && !document.getElementById('content-votes').classList.contains('hidden')) activeTab = 'votes';
+    if (document.getElementById('content-radio') && !document.getElementById('content-radio').classList.contains('hidden')) activeTab = 'radio';
+    
     let fields = '';
-    if (currentTab === 'votes') {
+    if (activeTab === 'votes') {
         fields = `
-            <input type="text" name="category" placeholder="플랫폼 (예: 뮤빗)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
-            <input type="text" name="title" placeholder="투표 제목" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
-            <input type="url" name="link" placeholder="투표 링크" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
-            <input type="text" name="deadline" placeholder="마감 (YYYY-MM-DD)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white">`;
-    } else if (currentTab === 'radio') {
+            <input type="text" name="category" placeholder="플랫폼" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
+            <input type="text" name="title" placeholder="투표 제목" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
+            <input type="url" name="link" placeholder="투표 링크" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white">`;
+    } else if (activeTab === 'radio') {
         fields = `
-            <input type="text" name="category" placeholder="방송사 (예: MBC)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
-            <input type="text" name="title" placeholder="제목/프로그램" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
-            <input type="url" name="link" placeholder="게시판 링크" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
-            <textarea name="description" placeholder="사연 예시" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white h-32"></textarea>`;
+            <input type="text" name="category" placeholder="방송사" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
+            <input type="text" name="title" placeholder="곡/프로그램 제목" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
+            <textarea name="description" placeholder="사연 내용" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white h-24"></textarea>`;
     } else {
-        fields = `<p class="text-gray-400 text-center py-4">이 탭의 내용은 관리 도구에서만 추가 가능합니다.</p>`;
+        fields = `<p class="text-gray-400 text-center py-4">이 탭에서는 추가 기능을 지원하지 않습니다.</p>`;
     }
+
     formContent.innerHTML = fields;
     modal.classList.remove('hidden');
 }
