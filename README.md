@@ -24,7 +24,8 @@
 ## 🌐 URL
 
 - **GitHub Repository**: https://github.com/ppplllil-spec/PLLILink
-- **개발 서버**: https://3000-i5354ajam1oqpq3wdemye-02b9cc79.sandbox.novita.ai
+- **메인 페이지**: https://3000-i5354ajam1oqpq3wdemye-02b9cc79.sandbox.novita.ai
+- **ASTERUM STATION 대시보드**: https://3000-i5354ajam1oqpq3wdemye-02b9cc79.sandbox.novita.ai/dashboard
 - **API Base URL**: https://3000-i5354ajam1oqpq3wdemye-02b9cc79.sandbox.novita.ai/api
 
 ## ✨ 주요 기능
