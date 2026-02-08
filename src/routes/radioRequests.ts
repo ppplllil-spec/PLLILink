@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 const radio = new Hono()
 
-// 수희님의 통합 API 주소 (라디오 탭 지정)
+// 새로 만드신 radioRequests 탭을 연결합니다.
 const API_URL = 'https://script.google.com/macros/s/AKfycbzl-B7_aSqGBpgnUPA62kRQHFdMPCwdpJsO-44Rpi8azR0DnulTau63xgs5cqfgoGELVg/exec?type=radioRequests'
 
 radio.get('/', async (c) => {
@@ -10,11 +10,18 @@ radio.get('/', async (c) => {
   return c.json({ success: true, data: data })
 })
 
+// 시트로 정보를 보낼 때도 바뀐 항목명으로 보냅니다.
 radio.post('/', async (c) => {
   const body = await c.req.json()
   const res = await fetch(API_URL, {
     method: 'POST',
-    body: JSON.stringify({ ...body, type: 'radioRequests' })
+    body: JSON.stringify({ 
+      type: 'radioRequests',
+      category: body.category, // 자동입력, 복사신청 등
+      title: body.title,
+      link: body.link,
+      description: body.description // 예시문
+    })
   })
   return c.json(await res.json())
 })
