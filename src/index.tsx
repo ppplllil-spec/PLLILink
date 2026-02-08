@@ -642,11 +642,17 @@ app.get('/dashboard', (c) => {
           .content-section.active {
             display: block;
           }
+          
+          .hidden {
+            display: none;
+          }
         </style>
     </head>
     <body>
+        <!-- 기념일 배너 -->
         <div id="anniversary-banner" class="hidden"></div>
 
+        <!-- 헤더 -->
         <header class="p-4 flex justify-between items-center glass-panel mb-4">
             <h1 class="text-xl font-black italic text-cyan-400">ASTERUM STATION</h1>
             <div class="flex gap-2">
@@ -659,6 +665,7 @@ app.get('/dashboard', (c) => {
             </div>
         </header>
 
+        <!-- 탭 네비게이션 -->
         <nav class="flex gap-2 p-4 overflow-x-auto">
             <button id="tab-schedule" onclick="switchTab('schedule')" class="tab-btn active">오늘의 일정</button>
             <button id="tab-votes" onclick="switchTab('votes')" class="tab-btn">투표 가이드</button>
@@ -666,34 +673,33 @@ app.get('/dashboard', (c) => {
             <button id="tab-youtube" onclick="switchTab('youtube')" class="tab-btn">PLAVE유튭</button>
         </nav>
 
+        <!-- 메인 콘텐츠 -->
         <main class="p-4">
+            <!-- 오늘의 일정 -->
             <div id="content-schedule" class="content-section active">
                 <div id="today-schedule-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- 동적 로딩 -->
+                    <div class="col-span-full text-center text-gray-400 py-8">로딩 중...</div>
                 </div>
             </div>
             
+            <!-- 투표 가이드 -->
             <div id="content-votes" class="content-section">
                 <div id="votes-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- 동적 로딩 -->
+                    <div class="col-span-full text-center text-gray-400 py-8">로딩 중...</div>
                 </div>
             </div>
             
+            <!-- 라디오 신청 -->
             <div id="content-radio" class="content-section">
                 <div id="radio-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- 동적 로딩 -->
+                    <div class="col-span-full text-center text-gray-400 py-8">로딩 중...</div>
                 </div>
             </div>
             
+            <!-- PLAVE 유튜브 -->
             <div id="content-youtube" class="content-section">
-                <div class="glass-panel p-6 rounded-lg">
-                    <h2 class="text-2xl font-bold text-cyan-400 mb-4">
-                        <i class="fab fa-youtube mr-2"></i>PLAVE 유튜브 채널
-                    </h2>
-                    <p class="text-gray-300 mb-4">PLAVE 공식 유튜브 채널의 최신 영상을 확인하세요!</p>
-                    <a href="https://www.youtube.com/@PLAVE_official" target="_blank" class="inline-block bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition-all">
-                        <i class="fab fa-youtube mr-2"></i>유튜브 바로가기
-                    </a>
+                <div id="youtube-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="col-span-full text-center text-gray-400 py-8">로딩 중...</div>
                 </div>
             </div>
         </main>
@@ -717,202 +723,47 @@ app.get('/dashboard', (c) => {
             </div>
         </div>
 
-        <script src="/static/dashboard.js"></script>
+        <!-- app.js 로드 (모든 함수 포함) -->
+        <script src="/static/app.js?v=2.1"></script>
+        
         <script>
-          // 전역 변수
-          let isAdminMode = false;
-          let currentTab = 'schedule';
+          // Dashboard 전용 스크립트
+          console.log('🚀 ASTERUM STATION Dashboard Loaded');
           
-          // ADMIN 모드 토글
-          function toggleAdminMode() {
-            isAdminMode = !isAdminMode;
-            const statusEl = document.getElementById('admin-status');
-            const songBtn = document.getElementById('song-manager-btn');
+          // 페이지 로드 시 초기화
+          document.addEventListener('DOMContentLoaded', () => {
+            console.log('📱 Initializing Dashboard...');
             
-            if (isAdminMode) {
-              statusEl.textContent = 'ON';
-              statusEl.classList.add('text-cyan-400');
-              songBtn.classList.remove('hidden');
-            } else {
-              statusEl.textContent = 'OFF';
-              statusEl.classList.remove('text-cyan-400');
+            // 1. 기념일 체크
+            if (typeof checkMemberAnniversaries === 'function') {
+              checkMemberAnniversaries();
             }
             
-            console.log('Admin mode:', isAdminMode);
-          }
+            // 2. 알림 권한 요청
+            if (typeof requestNotificationPermission === 'function') {
+              requestNotificationPermission();
+            }
+            
+            // 3. 초기 데이터 로드 (오늘의 일정)
+            renderTodaySchedule();
+            
+            // 4. YouTube 비디오 폴링 시작 (5분마다)
+            if (typeof startVideoPolling === 'function') {
+              startVideoPolling();
+            }
+            
+            console.log('✅ Dashboard Initialized');
+          });
           
-          // 곡 관리 모달 열기
-          function openSongManager() {
-            if (!isAdminMode) {
-              alert('관리자 모드를 먼저 활성화해주세요.');
-              return;
-            }
-            alert('곡 관리 기능은 개발 중입니다.');
-          }
-          
-          // 탭 전환
-          function switchTab(tab) {
-            currentTab = tab;
-            
-            // 모든 탭 버튼 비활성화
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-              btn.classList.remove('active');
-            });
-            
-            // 선택된 탭 활성화
-            document.getElementById(\`tab-\${tab}\`).classList.add('active');
-            
-            // 모든 콘텐츠 숨기기
-            document.querySelectorAll('.content-section').forEach(section => {
-              section.classList.remove('active');
-            });
-            
-            // 선택된 콘텐츠 표시
-            document.getElementById(\`content-\${tab}\`).classList.add('active');
-            
-            // 데이터 로드
-            loadTabData(tab);
-          }
-          
-          // 탭별 데이터 로드
-          async function loadTabData(tab) {
-            try {
-              if (tab === 'schedule') {
-                const response = await axios.get('/api/schedule/today');
-                renderSchedule(response.data.data);
-              } else if (tab === 'votes') {
-                const response = await axios.get('/api/votes');
-                renderVotes(response.data.data);
-              } else if (tab === 'radio') {
-                const response = await axios.get('/api/radio-requests');
-                renderRadio(response.data.data);
-              }
-            } catch (error) {
-              console.error('Failed to load data:', error);
-            }
-          }
-          
-          // 스케줄 렌더링
-          function renderSchedule(data) {
-            const container = document.getElementById('today-schedule-content');
-            if (!data || (!data.deadlineVotes?.length && !data.recurringVotes?.length && !data.radioRequests?.length)) {
-              container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">오늘 일정이 없습니다.</div>';
-              return;
-            }
-            
-            let html = '';
-            
-            // 마감 투표
-            if (data.deadlineVotes?.length) {
-              html += '<div class="col-span-full"><h3 class="text-lg font-bold text-cyan-400 mb-2">📅 오늘 마감 투표</h3></div>';
-              data.deadlineVotes.forEach(vote => {
-                html += \`
-                  <div class="glass-panel p-4 rounded-lg">
-                    <h4 class="font-bold text-cyan-300 mb-2">\${vote.title}</h4>
-                    <p class="text-sm text-gray-400 mb-2">\${vote.platform || '플랫폼 정보 없음'}</p>
-                    <a href="\${vote.vote_url}" target="_blank" class="inline-block bg-cyan-600 hover:bg-cyan-500 text-white text-sm py-1 px-3 rounded transition-all">
-                      투표하기
-                    </a>
-                  </div>
-                \`;
-              });
-            }
-            
-            // 반복 투표
-            if (data.recurringVotes?.length) {
-              html += '<div class="col-span-full mt-4"><h3 class="text-lg font-bold text-purple-400 mb-2">🔄 매일 반복 투표</h3></div>';
-              data.recurringVotes.forEach(vote => {
-                html += \`
-                  <div class="glass-panel p-4 rounded-lg">
-                    <h4 class="font-bold text-purple-300 mb-2">\${vote.title}</h4>
-                    <p class="text-sm text-gray-400 mb-2">\${vote.platform || '플랫폼 정보 없음'}</p>
-                    <a href="\${vote.vote_url}" target="_blank" class="inline-block bg-purple-600 hover:bg-purple-500 text-white text-sm py-1 px-3 rounded transition-all">
-                      투표하기
-                    </a>
-                  </div>
-                \`;
-              });
-            }
-            
-            // 라디오 요청
-            if (data.radioRequests?.length) {
-              html += '<div class="col-span-full mt-4"><h3 class="text-lg font-bold text-green-400 mb-2">📻 오늘 라디오 신청</h3></div>';
-              data.radioRequests.forEach(radio => {
-                html += \`
-                  <div class="glass-panel p-4 rounded-lg">
-                    <h4 class="font-bold text-green-300 mb-2">\${radio.station_name}</h4>
-                    <p class="text-sm text-gray-400 mb-2">\${radio.program_name || '프로그램 정보 없음'}</p>
-                    \${radio.request_url ? \`
-                      <a href="\${radio.request_url}" target="_blank" class="inline-block bg-green-600 hover:bg-green-500 text-white text-sm py-1 px-3 rounded transition-all">
-                        신청하기
-                      </a>
-                    \` : ''}
-                  </div>
-                \`;
-              });
-            }
-            
-            container.innerHTML = html;
-          }
-          
-          // 투표 렌더링
-          function renderVotes(votes) {
-            const container = document.getElementById('votes-list');
-            if (!votes || !votes.length) {
-              container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">등록된 투표가 없습니다.</div>';
-              return;
-            }
-            
-            container.innerHTML = votes.map(vote => \`
-              <div class="glass-panel p-4 rounded-lg">
-                <h4 class="font-bold text-cyan-300 mb-2">\${vote.title}</h4>
-                <p class="text-sm text-gray-400 mb-2">\${vote.platform || '플랫폼 정보 없음'}</p>
-                \${vote.description ? \`<p class="text-sm text-gray-500 mb-2">\${vote.description}</p>\` : ''}
-                <div class="flex gap-2">
-                  <a href="\${vote.vote_url}" target="_blank" class="flex-1 text-center bg-cyan-600 hover:bg-cyan-500 text-white text-sm py-2 rounded transition-all">
-                    투표하기
-                  </a>
-                  <button onclick="openProof()" class="bg-purple-600 hover:bg-purple-500 text-white text-sm py-2 px-3 rounded transition-all">
-                    인증
-                  </button>
-                </div>
-              </div>
-            \`).join('');
-          }
-          
-          // 라디오 렌더링
-          function renderRadio(radios) {
-            const container = document.getElementById('radio-list');
-            if (!radios || !radios.length) {
-              container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">등록된 라디오가 없습니다.</div>';
-              return;
-            }
-            
-            container.innerHTML = radios.map(radio => \`
-              <div class="glass-panel p-4 rounded-lg">
-                <h4 class="font-bold text-green-300 mb-2">\${radio.station_name}</h4>
-                <p class="text-sm text-gray-400 mb-2">\${radio.program_name || '프로그램 정보 없음'}</p>
-                \${radio.description ? \`<p class="text-sm text-gray-500 mb-2">\${radio.description}</p>\` : ''}
-                \${radio.request_url ? \`
-                  <a href="\${radio.request_url}" target="_blank" class="inline-block bg-green-600 hover:bg-green-500 text-white text-sm py-2 px-4 rounded transition-all">
-                    신청하기
-                  </a>
-                \` : ''}
-              </div>
-            \`).join('');
-          }
-          
-          // 인증 모달 열기
+          // 인증 모달 함수들
           function openProof() {
             document.getElementById('proof-modal').classList.remove('hidden');
           }
           
-          // 인증 모달 닫기
           function closeProof() {
             document.getElementById('proof-modal').classList.add('hidden');
           }
           
-          // 인증서 생성
           function generateProof() {
             const watermark = document.getElementById('watermark-input').value || 'PLLI';
             const canvas = document.getElementById('proof-canvas');
@@ -951,18 +802,83 @@ app.get('/dashboard', (c) => {
             
             // 다운로드
             const link = document.createElement('a');
-            link.download = \`PLAVE_투표인증_\${watermark}_\${today}.png\`;
+            link.download = \`PLAVE_투표인증_\${watermark}_\${today.replace(/\\./g, '-')}.png\`;
             link.href = canvas.toDataURL();
             link.click();
             
-            alert('인증서가 다운로드되었습니다!');
+            showToast('인증서가 다운로드되었습니다!', 'success');
             closeProof();
           }
           
-          // 초기 로드
-          document.addEventListener('DOMContentLoaded', () => {
-            loadTabData('schedule');
-          });
+          // loadYoutube 함수 정의 (app.js에 없을 경우 대비)
+          async function loadYoutube() {
+            console.log('📺 Loading YouTube videos...');
+            const container = document.getElementById('youtube-list');
+            
+            try {
+              // YouTube API 대신 YouTube 채널 정보 표시
+              container.innerHTML = \`
+                <div class="col-span-full glass-panel p-6 rounded-lg">
+                  <h2 class="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-2">
+                    <i class="fab fa-youtube text-red-500"></i>
+                    PLAVE 공식 유튜브
+                  </h2>
+                  <p class="text-gray-300 mb-4">
+                    PLAVE 공식 유튜브 채널에서 최신 영상을 확인하세요!
+                  </p>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                      <div class="text-cyan-400 font-bold mb-2">📊 채널 정보</div>
+                      <div class="text-sm text-gray-400">
+                        • 구독자: 100만+ 명<br>
+                        • 총 조회수: 2억+ 회<br>
+                        • 영상 수: 500+ 개
+                      </div>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                      <div class="text-purple-400 font-bold mb-2">🔔 알림 설정</div>
+                      <div class="text-sm text-gray-400">
+                        새 영상 업로드 시 브라우저 알림을 받으려면<br>
+                        상단의 알림 권한을 허용해주세요!
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex gap-3">
+                    <a href="https://www.youtube.com/@PLAVE_official" target="_blank" 
+                       class="flex-1 text-center bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition-all">
+                      <i class="fab fa-youtube mr-2"></i>채널 바로가기
+                    </a>
+                    <button onclick="if(typeof checkNewVideos === 'function') checkNewVideos();" 
+                            class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg transition-all">
+                      <i class="fas fa-sync-alt mr-2"></i>새 영상 확인
+                    </button>
+                  </div>
+                  <div class="mt-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                    <div class="flex items-start gap-2">
+                      <i class="fas fa-info-circle text-yellow-400 mt-1"></i>
+                      <div class="text-sm text-yellow-200">
+                        <strong>YouTube Data API 연동 필요</strong><br>
+                        실제 영상 목록을 표시하려면 YouTube Data API v3 키가 필요합니다.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              \`;
+              
+              console.log('✅ YouTube content loaded');
+            } catch (error) {
+              console.error('❌ YouTube loading failed:', error);
+              container.innerHTML = \`
+                <div class="col-span-full text-center text-red-400 py-8">
+                  <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                  <p>YouTube 정보를 불러오는데 실패했습니다.</p>
+                </div>
+              \`;
+            }
+          }
+          
+          // 전역으로 노출 (app.js에서 호출 가능하도록)
+          window.loadYoutube = loadYoutube;
         </script>
     </body>
     </html>
