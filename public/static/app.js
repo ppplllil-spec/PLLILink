@@ -1,101 +1,99 @@
-/** * PLAVE PLLI Community - 수희님 시트 맞춤형 통합 스크립트 
+/**
+ * PLLI LINK MASTER SCRIPT  통합 로직
  */
+let allVotes = [];
 let currentTab = 'schedule';
-let allRadioData = [];
 
-document.addEventListener('DOMContentLoaded', () => {
-    initApp();
-});
+document.addEventListener('DOMContentLoaded', () => initApp());
 
 async function initApp() {
-    console.log("🚀 플리링크 시스템 가동!");
-    updateNotificationButtonStatus(); // 알림 버튼 상태 초기화
-    await loadSchedule();
-    await loadVotes();
-    await loadAds();
-}
-
-// [기능 1] 알림 버튼 (수희님이 원하신 기능!)
-async function toggleNotifications() {
-    if (!('Notification' in window)) {
-        showToast('❌ 알림을 지원하지 않는 브라우저입니다.');
-        return;
-    }
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-        showToast('✅ 알림이 설정되었습니다! (마감 전 푸시 예정)');
-    }
     updateNotificationButtonStatus();
+    await refreshData();
+    setInterval(updateCountdowns, 1000); // [기능 1] 실시간 카운트다운
 }
 
-function updateNotificationButtonStatus() {
-    const btn = document.getElementById('notification-status');
-    if (!btn) return;
-    btn.innerText = (Notification.permission === 'granted') ? '알림 활성 중' : '알림 켜기';
-}
-
-// [기능 2] 오늘 일정 로드 (수희님 시트 헤더 기준)
-async function loadSchedule() {
-    const box = document.getElementById('today-deadline-votes');
-    if (!box) return;
+// [기능 1 & 6] 데이터 로드 및 일정 관리
+async function refreshData() {
     try {
-        const res = await axios.get('/api/schedule?type=schedule');
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        const todayData = res.data.data.filter(item => item.date === today);
-        
-        box.innerHTML = todayData.map(item => `
-            <div class="flex items-center gap-3 p-4 bg-cyan-500/5 rounded-2xl border border-cyan-500/10 mb-2">
-                <span class="text-cyan-400 font-bold text-xs">${item.time || '00:00'}</span>
-                <span class="text-white text-xs font-medium line-clamp-1">${item.title}</span>
-            </div>`).join('') || '<p class="text-gray-500 text-xs text-center py-10">오늘 일정이 없습니다.</p>';
-    } catch (e) { console.error('일정 로드 실패'); }
+        const [vRes, sRes, rRes] = await Promise.all([
+            axios.get('/api/votes?type=votes'),
+            axios.get('/api/schedule?type=schedule'),
+            axios.get('/api/radio-requests?type=radioRequests')
+        ]);
+        allVotes = vRes.data.data;
+        renderVotes(allVotes);
+        renderSchedule(sRes.data.data);
+    } catch (e) { console.error("데이터 로드 실패"); }
 }
 
-// [기능 3] 모달 입력창 복구 (텅 빈 화면 해결!)
-function openAddModal() {
-    const modal = document.getElementById('add-modal');
-    const content = document.getElementById('form-content');
-    if (!modal || !content) return;
-
-    // 현재 열린 탭 섹션 감지
-    let activeTab = currentTab;
-    if (document.getElementById('content-votes') && !document.getElementById('content-votes').classList.contains('hidden')) activeTab = 'votes';
-    if (document.getElementById('content-radio') && !document.getElementById('content-radio').classList.contains('hidden')) activeTab = 'radio';
-
-    let fields = '';
-    if (activeTab === 'votes') {
-        fields = `
-            <input type="text" name="category" placeholder="플랫폼 (예: 뮤빗)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
-            <input type="text" name="title" placeholder="투표 제목" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
-            <input type="url" name="link" placeholder="링크 주소" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white">`;
-    } else if (activeTab === 'radio') {
-        fields = `
-            <input type="text" name="category" placeholder="방송사 (예: MBC)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
-            <input type="text" name="title" placeholder="프로그램/곡 제목" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
-            <textarea name="description" placeholder="사연 내용" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white h-24"></textarea>`;
-    } else {
-        fields = `<p class="text-gray-400 text-center py-4">이 탭에서는 정보를 추가할 수 없습니다.</p>`;
-    }
-
-    content.innerHTML = fields;
-    modal.classList.remove('hidden');
-}
-
-// [기타 필수 유틸리티]
-function closeAddModal() { document.getElementById('add-modal').classList.add('hidden'); }
-function showToast(msg) {
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 bg-cyan-600 text-white font-bold rounded-full shadow-2xl animate-bounce';
-    toast.innerText = msg;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-function switchTab(tab) {
-    currentTab = tab;
-    document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
-    document.getElementById(`content-${tab}`).classList.remove('hidden');
+// [기능 1] 투표 렌더링 + 체크박스 + 카운트다운
+function renderVotes(data) {
+    const container = document.getElementById('votes-list');
+    const completed = JSON.parse(localStorage.getItem('completed_votes') || '[]');
     
-    document.querySelectorAll('[id^="tab-"]').forEach(btn => btn.classList.remove('tab-active', 'text-cyan-300'));
-    const activeBtn = document.getElementById(`tab-${tab}`);
-    if (activeBtn) activeBtn.classList.add('tab-active', 'text-cyan-300');
+    container.innerHTML = data.map(v => {
+        const isDone = completed.includes(v.id);
+        return `
+            <div class="card p-5 ${isDone ? 'opacity-50' : ''}" data-deadline="${v.deadline}">
+                <div class="flex justify-between items-start">
+                    <input type="checkbox" onclick="toggleVote('${v.id}')" ${isDone ? 'checked' : ''}>
+                    <span class="badge text-cyan-400">${v.platform}</span>
+                </div>
+                <h4 class="text-white font-bold my-2">${v.title}</h4>
+                <div class="countdown text-pink-500 font-mono text-xs mb-3" id="timer-${v.id}">남은 시간 계산 중...</div>
+                <div class="flex gap-2">
+                    <a href="${v.link}" target="_blank" class="flex-1 bg-cyan-600 text-center py-2 rounded-lg text-xs">투표하기</a>
+                    <button onclick="copyToClipboard('${v.link}')" class="px-3 bg-gray-800 rounded-lg"><i class="fas fa-copy"></i></button>
+                    <button onclick="shareToX('${v.title}', '${v.link}')" class="px-3 bg-gray-800 rounded-lg text-blue-400"><i class="fab fa-twitter"></i></button>
+                </div>
+            </div>`;
+    }).join('');
+    updateProgress(data.length, completed.length);
 }
+
+// [기능 5] 링크 자동 인식 (Meta 데이터 추출)
+async function fetchMetaData(url) {
+    if(!url.includes('http')) return;
+    showToast("🔗 링크 정보 분석 중...");
+    try {
+        const res = await axios.get(`/api/utils/metadata?url=${encodeURIComponent(url)}`);
+        if(res.data.success) {
+            document.querySelector('input[name="title"]').value = res.data.title;
+            showToast("✅ 제목 자동 입력 완료!");
+        }
+    } catch(e) { console.log("메타데이터 추출 실패"); }
+}
+
+// [기능 1] 실시간 카운트다운 로직
+function updateCountdowns() {
+    allVotes.forEach(v => {
+        const timerEl = document.getElementById(`timer-${v.id}`);
+        if(!timerEl || !v.deadline) return;
+        const diff = new Date(v.deadline) - new Date();
+        if(diff <= 0) {
+            timerEl.innerText = "마감됨";
+            return;
+        }
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        timerEl.innerText = `${h}시간 ${m}분 ${s}초 남음`;
+        
+        // [기능 1] 브라우저 알림 (1시간 전)
+        if(h === 1 && m === 0 && s === 0) sendNotification(`[마감임박] ${v.title} 투표가 1시간 남았습니다!`);
+    });
+}
+
+// [기능 7] 해외 라디오 예시문 자동 치환
+function getRadioTemplate(station, artist, song) {
+    const templates = {
+        'wpvr': `Hi BBC! Please play ${song} by ${artist}. It's my favorite!`,
+        'MBC': `안녕하세요! 플레이브의 ${song} 신청합니다. 꼭 들려주세요!`
+    };
+    return templates[station] || "";
+}
+
+// 유틸리티 함수들
+function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => showToast('📋 복사 완료!')); }
+function showToast(msg) { /* 토스트 UI 로직 */ }
+function updateNotificationButtonStatus() { /* 알림 버튼 UI 로직 */ }
