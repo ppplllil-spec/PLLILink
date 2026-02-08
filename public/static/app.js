@@ -110,36 +110,79 @@ function filterRadioByStation(stationName) {
         </div>`).join('');
 }
 
-// 5. 광고 및 일정 (가져와야 할 핵심 로직)
+// 1. 오늘 일정 로드 및 렌더링
+async function loadSchedule() {
+    const deadlineBox = document.getElementById('today-deadline-votes');
+    const radioBox = document.getElementById('today-radio');
+    const recurringBox = document.getElementById('today-recurring-votes');
+
+    try {
+        // [수정] 서버 경로와 시트 탭 이름을 정확히 일치시킵니다
+        const res = await axios.get('/api/schedule?type=schedule');
+        const data = res.data.data;
+        
+        // 오늘 날짜 구하기 (YYYY-MM-DD)
+        const today = new Date().toLocaleDateString('ko-KR', {
+            year: 'numeric', month: '2-digit', day: '2-digit'
+        }).replace(/\. /g, '-').replace('.', '');
+
+        // 오늘 일정만 필터링 (시트의 'date' 열 기준)
+        const todayItems = data.filter(item => item.date === today);
+
+        if (todayItems.length === 0) {
+            deadlineBox.innerHTML = '<p class="text-gray-500 text-xs px-2 text-center py-4">오늘 예정된 일정이 없습니다.</p>';
+            return;
+        }
+
+        // 일정 리스트 그리기
+        deadlineBox.innerHTML = todayItems.map(item => `
+            <div class="flex items-center gap-3 p-4 bg-cyan-500/5 rounded-2xl border border-cyan-500/10 mb-3 hover:border-cyan-500/30 transition-all">
+                <div class="flex flex-col items-center min-w-[50px] border-r border-cyan-500/20 pr-3">
+                    <span class="text-cyan-400 font-black text-xs">${item.time || '시간'}</span>
+                    <span class="text-[9px] text-gray-500 uppercase font-bold">${item.category || '기타'}</span>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-white text-sm font-bold line-clamp-1">${item.title}</h4>
+                    ${item.link ? `<a href="${item.link}" target="_blank" class="text-[10px] text-cyan-500 hover:underline">관련 링크 바로가기 ></a>` : ''}
+                </div>
+            </div>
+        `).join('');
+
+        console.log('✅ 오늘 일정 렌더링 완료');
+    } catch (e) { 
+        console.error('일정 로드 실패:', e);
+        deadlineBox.innerHTML = '<p class="text-red-400 text-xs text-center">데이터를 불러오지 못했습니다.</p>';
+    }
+}
+
+// 2. 광고 시안 로드 및 렌더링
 async function loadAds() {
     const container = document.getElementById('ads-list');
     if (!container) return;
+
     try {
         const res = await axios.get('/api/ad-requests?type=ads');
-        container.innerHTML = res.data.data.map(ad => `
-            <div class="card rounded-xl overflow-hidden border border-purple-500/20">
-                <img src="${ad.image}" class="w-full h-32 object-cover">
-                <div class="p-4">
-                    <h4 class="text-sm font-bold text-white mb-2">${ad.title}</h4>
-                    <a href="${ad.link}" target="_blank" class="block w-full py-2 bg-gray-800 text-cyan-400 text-center rounded-lg text-[10px] font-bold">상세보기</a>
-                </div>
-            </div>`).join('');
-    } catch (e) { console.error(e); }
-}
+        const data = res.data.data;
 
-async function loadSchedule() {
-    const deadlineBox = document.getElementById('today-deadline-votes');
-    if (!deadlineBox) return;
-    try {
-        const res = await axios.get('/api/schedule?type=schedule');
-        const today = new Date().toISOString().split('T')[0];
-        const todayItems = res.data.data.filter(item => item.date === today);
-        deadlineBox.innerHTML = todayItems.length ? todayItems.map(item => `
-            <div class="flex items-center gap-3 p-3 bg-cyan-500/5 rounded-xl border border-cyan-500/10 mb-2">
-                <span class="text-cyan-400 font-bold text-xs">${item.time}</span>
-                <span class="text-white text-xs font-medium">${item.title}</span>
-            </div>`).join('') : '<p class="text-gray-500 text-xs px-2 text-center">오늘 일정이 없습니다.</p>';
-    } catch (e) { console.error(e); }
+        container.innerHTML = data.map(ad => `
+            <div class="card overflow-hidden rounded-2xl border border-purple-500/20 group hover:border-purple-500/50 transition-all">
+                <div class="aspect-video bg-gray-900 relative overflow-hidden">
+                    <img src="${ad.image}" alt="${ad.title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onerror="this.src='/static/no-image.png'">
+                    <div class="absolute top-2 left-2">
+                        <span class="badge bg-black/60 backdrop-blur-md text-purple-400 border-purple-500/30 text-[10px] font-black">${ad.category}</span>
+                    </div>
+                </div>
+                <div class="p-5">
+                    <h4 class="text-white font-bold text-sm mb-4 line-clamp-1">${ad.title}</h4>
+                    <a href="${ad.link}" target="_blank" class="block w-full text-center py-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 rounded-xl text-[11px] font-black border border-purple-500/30 transition-all">
+                        시안 확인 및 다운로드
+                    </a>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) { 
+        console.error('광고 로드 실패:', e); 
+    }
 }
 
 // 6. 유튜브 로직 복구 (북마크 포함)
