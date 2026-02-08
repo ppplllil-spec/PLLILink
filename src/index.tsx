@@ -19,3 +19,11 @@
         </div>
     </div>
 </body>
+<section id="content-votes" class="content-section hidden">
+    <div class="flex justify-between items-end mb-6">
+        <h2 class="text-2xl font-black neon-text">VOTE GUIDE</h2>
+        <p class="text-[10px] text-cyan-400/70">체크박스를 누르면 완료 처리가 됩니다.</p>
+    </div>
+    <div id="votes-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        </div>
+</section>
