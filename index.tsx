@@ -950,12 +950,16 @@ async function renderRadioSection() {
     const exampleList = document.getElementById('example-text-list');
 
     try {
-        const res = await axios.get('/api/radio-requests?type=radioRequests'); 
-        allRadioData = res.data.data; // 데이터를 전역 변수에 저장
+        const res = await axios.get('/api/radio-requests?type=radioRequests');
+        // 데이터의 카테고리 이름에서 공백을 미리 제거합니다.
+        allRadioData = res.data.data.map(item => ({
+            ...item,
+            category: item.category ? item.category.trim() : ""
+        }));
 
-        // 1. '예시문'과 '일반 라디오' 데이터 분리
+        // 1. '예시문'과 '방송사' 분리 (공백 걱정 없음)
         const exampleTexts = allRadioData.filter(item => item.category === '예시문');
-        const radioStations = allRadioData.filter(item => item.category !== '예시문');
+        const radioStations = allRadioData.filter(item => item.category !== '예시문' && item.category !== "");
 
         // 2. 방송사 탭 버튼 생성
         const uniqueStations = [...new Set(radioStations.map(s => s.category))];
@@ -967,7 +971,7 @@ async function renderRadioSection() {
             </button>
         `).join('');
 
-        // 3. 하단 예시문 카드 생성 (보라색 박스 영역)
+        // 3. 하단 예시문 카드 생성
         exampleList.innerHTML = exampleTexts.map(text => `
             <div class="card p-4 rounded-xl border border-purple-500/30 bg-purple-900/5">
                 <h4 class="text-purple-400 font-bold mb-1">${text.title}</h4>
@@ -979,7 +983,6 @@ async function renderRadioSection() {
             </div>
         `).join('');
 
-        // 4. 초기 화면 설정 (첫 번째 방송사 데이터 노출)
         if (uniqueStations.length > 0) filterRadioByStation(uniqueStations[0]);
 
     } catch (err) {
