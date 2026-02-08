@@ -119,7 +119,6 @@ app.route('/api/radio-requests', radioRequests)
 app.route('/api/tips', tips)
 app.route('/api/utils', utils)
 app.route('/api/schedule', schedule)
-app.route('/api/radio-requests', radioRequests)
 
 // 메인 페이지
 app.get('/', (c) => {
