@@ -587,6 +587,17 @@ app.get('/', (c) => {
           }
         </script>
         </div>
+        <footer class="mt-12 pb-8 text-center relative z-10">
+    <div class="inline-block p-4 rounded-xl bg-gray-900/40 backdrop-blur-md border border-cyan-500/20">
+        <a href="https://docs.google.com/spreadsheets/d/1O4M_r_ZMNFOCRPIluqMpgfwRtdUSAwy520lyrBX104Y/edit#gid=0" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           class="flex items-center gap-2 text-gray-400 hover:text-cyan-400 transition-all text-xs font-semibold">
+            <i class="fas fa-table text-cyan-500"></i>
+            📊 실시간 데이터 관리 도구 (Admin Only)
+        </a>
+    </div>
+</footer>
     </body>
     </html>
   `)
