@@ -950,7 +950,7 @@ async function renderRadioSection() {
     const exampleList = document.getElementById('example-text-list');
 
     try {
-        const res = await axios.get('/api/radio-requests');
+        const res = await axios.get('/api/radio-requests?type=radioRequests');
         allRadioData = res.data.data; // 데이터를 전역 변수에 저장
 
         // 1. '예시문'과 '일반 라디오' 데이터 분리
