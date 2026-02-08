@@ -682,7 +682,33 @@ app.get('/dashboard', (c) => {
                     <div class="col-span-full text-center text-gray-400 py-8">로딩 중...</div>
                 </div>
             </div>
+            <div id="content-radio" class="content-section hidden">
+    <div class="mb-6">
+        <h3 class="text-sm font-bold text-cyan-500/70 mb-3 px-1 uppercase tracking-widest">Select Station</h3>
+        <div id="radio-station-tabs" class="flex gap-2 overflow-x-auto pb-4 border-b border-cyan-900/30">
+            </div>
+    </div>
+
+    <div id="radio-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+        </div>
+
+    <div class="mt-16 p-6 rounded-3xl bg-purple-900/10 border border-purple-500/20 relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-8 opacity-10 text-6xl">
+            <i class="fas fa-quote-right text-purple-400"></i>
+        </div>
+        
+        <div class="relative z-10">
+            <h3 class="text-2xl font-black neon-text mb-2 flex items-center gap-3">
+                <i class="fas fa-pen-nib text-purple-400"></i>
+                라디오 신청 사연 저장소
+            </h3>
+            <p class="text-gray-400 text-sm mb-8 px-1">원하는 사연을 복사하여 라디오 게시판에 활용하세요.</p>
             
+            <div id="example-text-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </div>
+    </div>
+</div>
             <!-- 라디오 신청 -->
             // 1. 데이터 분류 (라디오 섹션 안에서 처리)
 const radioData = data || []; 
@@ -733,20 +759,6 @@ return (
   </div>
 );
 
-<div id="content-radio" class="content-section hidden">
-    <div id="radio-station-tabs" class="flex gap-2 overflow-x-auto pb-4 mb-6 border-b border-cyan-900/30">
-        </div>
-
-    <div id="radio-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
-        </div>
-
-    <div class="mt-12 p-6 rounded-2xl bg-purple-900/10 border border-purple-500/20">
-        <h3 class="text-xl font-black neon-text mb-6">📝 라디오 신청 예시문</h3>
-        <div id="example-text-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            </div>
-    </div>
-</div>
-            
             <!-- PLAVE 유튜브 -->
             <div id="content-youtube" class="content-section">
                 <div id="youtube-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -930,72 +942,89 @@ return (
           
           // 전역으로 노출 (app.js에서 호출 가능하도록)
           window.loadYoutube = loadYoutube;
-          // 라디오 데이터를 가져와서 화면에 뿌려주는 핵심 함수
+// 전역 변수로 데이터 보관 (필터링 시 재사용)
+let allRadioData = [];
+
 async function renderRadioSection() {
-  const container = document.getElementById('radio-list');
-  const tabContainer = document.getElementById('radio-station-tabs');
-  const exampleContainer = document.getElementById('example-text-list');
+    const tabContainer = document.getElementById('radio-station-tabs');
+    const exampleList = document.getElementById('example-text-list');
 
-  try {
-    const res = await axios.get('/api/radio-requests');
-    const allData = res.data.data;
+    try {
+        const res = await axios.get('/api/radio-requests');
+        allRadioData = res.data.data; // 데이터를 전역 변수에 저장
 
-    // 1. 데이터 분류: '예시문' 카테고리와 '방송사' 카테고리 분리
-    const exampleTexts = allData.filter(item => item.category === '예시문');
-    const stations = allData.filter(item => item.category !== '예시문');
+        // 1. '예시문'과 '일반 라디오' 데이터 분리
+        const exampleTexts = allRadioData.filter(item => item.category === '예시문');
+        const radioStations = allRadioData.filter(item => item.category !== '예시문');
 
-    // 2. 방송사 탭 버튼 생성
-    const uniqueStations = [...new Set(stations.map(s => s.category))];
-    tabContainer.innerHTML = uniqueStations.map((station, idx) => `
-      <button onclick="filterByStation('${station}')" 
-              class="station-tab-btn px-4 py-2 rounded-xl font-bold transition-all text-gray-400 hover:text-cyan-400"
-              data-station="${station}">
-        ${station}
-      </button>
-    `).join('');
+        // 2. 방송사 탭 버튼 생성
+        const uniqueStations = [...new Set(radioStations.map(s => s.category))];
+        tabContainer.innerHTML = uniqueStations.map(station => `
+            <button onclick="filterRadioByStation('${station}')" 
+                    class="station-tab-btn px-4 py-2 rounded-xl font-bold transition-all text-gray-400 border border-cyan-800/30 hover:border-cyan-500/50"
+                    data-station="${station}">
+                ${station}
+            </button>
+        `).join('');
 
-    // 3. 하단 예시문 카드 생성
-    exampleContainer.innerHTML = exampleTexts.map(text => `
-      <div class="card p-4 rounded-xl border border-purple-500/30 bg-purple-900/5">
-        <h4 class="text-purple-400 font-bold mb-2">${text.title}</h4>
-        <p class="text-sm text-gray-300 mb-4">${text.description}</p>
-        <button onclick="copyToClipboard('${text.description.replace(/\n/g, '\\n')}')" 
-                class="w-full py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 rounded-lg text-xs font-bold transition-all">
-          사연 복사하기
-        </button>
-      </div>
-    `).join('');
+        // 3. 하단 예시문 카드 생성 (보라색 박스 영역)
+        exampleList.innerHTML = exampleTexts.map(text => `
+            <div class="card p-4 rounded-xl border border-purple-500/30 bg-purple-900/5">
+                <h4 class="text-purple-400 font-bold mb-1">${text.title}</h4>
+                <p class="text-sm text-gray-300 mb-4">${text.description}</p>
+                <button onclick="copyToClipboard('${text.description.replace(/\n/g, '\\n')}')" 
+                        class="w-full py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 rounded-lg text-xs font-bold transition-all">
+                    문구 복사하기
+                </button>
+            </div>
+        `).join('');
 
-    // 초기값으로 첫 번째 방송사 선택
-    if (uniqueStations.length > 0) filterByStation(uniqueStations[0]);
+        // 4. 초기 화면 설정 (첫 번째 방송사 데이터 노출)
+        if (uniqueStations.length > 0) filterRadioByStation(uniqueStations[0]);
 
-  } catch (err) {
-    container.innerHTML = '<p class="text-red-400">데이터를 불러오지 못했습니다.</p>';
-  }
+    } catch (err) {
+        console.error('라디오 데이터 로드 실패:', err);
+    }
 }
 
-// 방송사 탭 클릭 시 필터링하는 함수
-function filterByStation(stationName) {
-  // 버튼 스타일 변경
-  document.querySelectorAll('.station-tab-btn').forEach(btn => {
-    btn.classList.toggle('tab-active', btn.dataset.station === stationName);
-  });
+// 탭을 눌렀을 때 해당 방송사의 카드를 그려주는 함수
+function filterRadioByStation(stationName) {
+    const radioList = document.getElementById('radio-list');
+    
+    // 버튼 활성화 스타일 적용
+    document.querySelectorAll('.station-tab-btn').forEach(btn => {
+        btn.classList.toggle('tab-active', btn.getAttribute('data-station') === stationName);
+    });
 
-  // 해당 방송사 카드 리스트 렌더링 (이 부분은 기존 RadioCard 로직 연결)
-  // ... (생략)
+    // 해당 방송사 데이터만 골라내기
+    const filtered = allRadioData.filter(item => item.category === stationName);
+
+    // 실제 카드 생성 로직
+    radioList.innerHTML = filtered.map(item => `
+        <div class="card p-5 rounded-2xl border border-cyan-500/20 hover:border-cyan-500/50 transition-all group">
+            <div class="flex justify-between items-start mb-4">
+                <span class="badge text-cyan-400 border-cyan-500/30 bg-cyan-500/10 text-[10px]">${item.category}</span>
+                ${item.title.includes('다중') ? '<span class="badge text-blue-400 border-blue-500/30 bg-blue-500/10 text-[10px]">다중신청</span>' : ''}
+            </div>
+            <h4 class="text-lg font-black text-white mb-2 group-hover:text-cyan-400 transition-colors">${item.title}</h4>
+            <p class="text-xs text-gray-400 mb-6 line-clamp-2">${item.description || '플레이브 곡을 신청해 주세요!'}</p>
+            <div class="flex gap-2">
+                <a href="${item.link}" target="_blank" class="flex-1 text-center py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold transition-all">
+                    신청하러 가기
+                </a>
+            </div>
+        </div>
+    `).join('');
 }
 
-// 텍스트 복사 함수
 function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    alert('📋 사연이 복사되었습니다! 라디오 게시판에 붙여넣어 주세요.');
-  });
+    navigator.clipboard.writeText(text).then(() => {
+        alert('📋 신청 문구가 복사되었습니다!');
+    });
 }
 
-// 페이지 로드 시 실행 목록에 추가
-document.addEventListener('DOMContentLoaded', () => {
-  renderRadioSection(); 
-});
+// 페이지 로드 시 실행
+document.addEventListener('DOMContentLoaded', renderRadioSection);
         </script>
     </body>
     </html>
