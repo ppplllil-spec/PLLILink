@@ -930,6 +930,72 @@ return (
           
           // 전역으로 노출 (app.js에서 호출 가능하도록)
           window.loadYoutube = loadYoutube;
+          // 라디오 데이터를 가져와서 화면에 뿌려주는 핵심 함수
+async function renderRadioSection() {
+  const container = document.getElementById('radio-list');
+  const tabContainer = document.getElementById('radio-station-tabs');
+  const exampleContainer = document.getElementById('example-text-list');
+
+  try {
+    const res = await axios.get('/api/radio-requests');
+    const allData = res.data.data;
+
+    // 1. 데이터 분류: '예시문' 카테고리와 '방송사' 카테고리 분리
+    const exampleTexts = allData.filter(item => item.category === '예시문');
+    const stations = allData.filter(item => item.category !== '예시문');
+
+    // 2. 방송사 탭 버튼 생성
+    const uniqueStations = [...new Set(stations.map(s => s.category))];
+    tabContainer.innerHTML = uniqueStations.map((station, idx) => `
+      <button onclick="filterByStation('${station}')" 
+              class="station-tab-btn px-4 py-2 rounded-xl font-bold transition-all text-gray-400 hover:text-cyan-400"
+              data-station="${station}">
+        ${station}
+      </button>
+    `).join('');
+
+    // 3. 하단 예시문 카드 생성
+    exampleContainer.innerHTML = exampleTexts.map(text => `
+      <div class="card p-4 rounded-xl border border-purple-500/30 bg-purple-900/5">
+        <h4 class="text-purple-400 font-bold mb-2">${text.title}</h4>
+        <p class="text-sm text-gray-300 mb-4">${text.description}</p>
+        <button onclick="copyToClipboard('${text.description.replace(/\n/g, '\\n')}')" 
+                class="w-full py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 rounded-lg text-xs font-bold transition-all">
+          사연 복사하기
+        </button>
+      </div>
+    `).join('');
+
+    // 초기값으로 첫 번째 방송사 선택
+    if (uniqueStations.length > 0) filterByStation(uniqueStations[0]);
+
+  } catch (err) {
+    container.innerHTML = '<p class="text-red-400">데이터를 불러오지 못했습니다.</p>';
+  }
+}
+
+// 방송사 탭 클릭 시 필터링하는 함수
+function filterByStation(stationName) {
+  // 버튼 스타일 변경
+  document.querySelectorAll('.station-tab-btn').forEach(btn => {
+    btn.classList.toggle('tab-active', btn.dataset.station === stationName);
+  });
+
+  // 해당 방송사 카드 리스트 렌더링 (이 부분은 기존 RadioCard 로직 연결)
+  // ... (생략)
+}
+
+// 텍스트 복사 함수
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    alert('📋 사연이 복사되었습니다! 라디오 게시판에 붙여넣어 주세요.');
+  });
+}
+
+// 페이지 로드 시 실행 목록에 추가
+document.addEventListener('DOMContentLoaded', () => {
+  renderRadioSection(); 
+});
         </script>
     </body>
     </html>
