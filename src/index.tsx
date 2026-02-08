@@ -432,23 +432,6 @@ app.get('/', (c) => {
                 </div>
             </div>
 
-            <!-- 라디오 섹션 -->
-            <div id="content-radio" class="content-section hidden">
-                <div class="mb-4 flex gap-2 justify-between items-center flex-wrap">
-                    <div class="flex gap-2">
-                        <button onclick="filterRadio('all')" class="radio-filter-btn px-4 py-2 rounded-lg bg-white shadow">전체</button>
-                        <button onclick="filterRadio('domestic')" class="radio-filter-btn px-4 py-2 rounded-lg bg-white shadow">국내</button>
-                        <button onclick="filterRadio('international')" class="radio-filter-btn px-4 py-2 rounded-lg bg-white shadow">해외</button>
-                    </div>
-                    <button onclick="openExampleTextManager()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg">
-                        <i class="fas fa-file-alt mr-2"></i>예시문 관리
-                    </button>
-                </div>
-                <div id="radio-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- 로딩 중... -->
-                </div>
-            </div>
-
             <!-- 팁 섹션 -->
             <div id="content-tips" class="content-section hidden">
                 <div id="tips-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -701,11 +684,68 @@ app.get('/dashboard', (c) => {
             </div>
             
             <!-- 라디오 신청 -->
-            <div id="content-radio" class="content-section">
-                <div id="radio-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="col-span-full text-center text-gray-400 py-8">로딩 중...</div>
-                </div>
+            // 1. 데이터 분류 (라디오 섹션 안에서 처리)
+const radioData = data || []; 
+const radioStations = radioData.filter(item => item.category !== '예시문'); // 방송사들
+const exampleTexts = radioData.filter(item => item.category === '예시문'); // 예시문 전용
+
+// 2. 화면 렌더링 (Return 부분)
+return (
+  <div>
+    {/* 방송사별 이동 탭 */}
+    <div className="flex gap-2 overflow-x-auto pb-4 mb-6 border-b border-cyan-900/30">
+      {[...new Set(radioStations.map(item => item.category))].map(station => (
+        <button 
+          key={station}
+          onClick={() => setActiveStation(station)}
+          className={`px-4 py-2 rounded-xl font-bold transition-all ${activeStation === station ? 'tab-active' : 'text-gray-400 hover:text-cyan-400'}`}
+        >
+          {station}
+        </button>
+      ))}
+    </div>
+
+    {/* 방송사별 카드 리스트 */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+      {radioStations.filter(item => item.category === activeStation).map(item => (
+        <RadioCard key={item.id} item={item} />
+      ))}
+    </div>
+
+    {/* 분리된 예시문 섹션 */}
+    <div className="mt-12 p-6 rounded-2xl bg-purple-900/10 border border-purple-500/20">
+      <h3 className="text-xl font-black neon-text mb-6">📝 라디오 신청 예시문</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {exampleTexts.map(text => (
+          <div key={text.id} className="card p-4 rounded-xl border border-purple-500/30">
+            <h4 className="text-purple-400 font-bold mb-2">{text.title}</h4>
+            <p className="text-sm text-gray-300 mb-4">{text.description}</p>
+            <button 
+              onClick={() => copyToClipboard(text.description)}
+              className="w-full py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 rounded-lg text-xs font-bold transition-all"
+            >
+              사연 문구 복사하기
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+<div id="content-radio" class="content-section hidden">
+    <div id="radio-station-tabs" class="flex gap-2 overflow-x-auto pb-4 mb-6 border-b border-cyan-900/30">
+        </div>
+
+    <div id="radio-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+        </div>
+
+    <div class="mt-12 p-6 rounded-2xl bg-purple-900/10 border border-purple-500/20">
+        <h3 class="text-xl font-black neon-text mb-6">📝 라디오 신청 예시문</h3>
+        <div id="example-text-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             </div>
+    </div>
+</div>
             
             <!-- PLAVE 유튜브 -->
             <div id="content-youtube" class="content-section">
