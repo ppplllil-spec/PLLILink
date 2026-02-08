@@ -1,5 +1,5 @@
 /**
- * PLAVE PLLI Community - 최종 통합 관리 스크립트
+ * PLAVE PLLI Community - 최종 통합 관리 스크립트 (기능 100% 통합)
  */
 
 // 1. 전역 상태 및 설정
@@ -17,27 +17,28 @@ const PLAVE_ANNIVERSARIES = [
     { name: '하민🖤', date: '11-01' }
 ];
 
-// 2. 통합 초기화
+// 2. 통합 초기화 및 실행
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
 
 async function initApp() {
     console.log('🚀 통합 시스템 가동...');
-    checkMemberAnniversaries();
-    await loadSchedule();
-    await loadVotes();
-    await loadAds();
+    checkMemberAnniversaries(); // 생일 배너
+    await loadSchedule();       // 오늘 일정 (최우선)
+    await loadVotes();          // 투표 가이드
+    await loadAds();            // 광고 시안
     
+    // URL 파라미터 체크 (예: ?tab=radio 이면 해당 탭으로 바로 이동)
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
     if (tab) switchTab(tab);
 }
 
-// 3. 투표 섹션 (중요도 정렬 및 체크박스)
+// 3. 투표 섹션 (체크박스 및 SNS 공유 통합)
 async function loadVotes() {
     try {
-        const res = await axios.get('/api/votes?type=votes')
+        const res = await axios.get('/api/votes?type=votes');
         allVotes = res.data.data;
         renderVotes();
     } catch (err) { console.error('투표 로드 실패:', err); }
@@ -65,13 +66,15 @@ function renderVotes() {
                     <button onclick="shareToX('${vote.title}', '${vote.link}')" class="px-3 py-2 bg-gray-800 rounded-lg text-blue-400"><i class="fab fa-twitter"></i></button>
                 </div>
             </div>`;
-    }).join('');
+    }).join('') || '<p class="col-span-full text-center text-gray-500 py-10">등록된 투표가 없습니다.</p>';
 }
 
-// 4. 라디오 섹션 (공백 제거 및 필터링)
+// 4. 라디오 섹션 (탭 필터링 및 공백 제거 통합)
 async function renderRadioSection() {
     const tabContainer = document.getElementById('radio-station-tabs');
     const exampleList = document.getElementById('example-text-list');
+    if (!tabContainer || !exampleList) return;
+
     try {
         const res = await axios.get('/api/radio-requests?type=radioRequests');
         allRadioData = res.data.data.map(item => ({ ...item, category: item.category ? item.category.trim() : "" }));
@@ -87,7 +90,7 @@ async function renderRadioSection() {
             <div class="card p-4 rounded-xl border border-purple-500/30 bg-purple-900/5">
                 <h4 class="text-purple-400 font-bold mb-1">${text.title}</h4>
                 <p class="text-sm text-gray-300 mb-4">${text.description}</p>
-                <button onclick="copyToClipboard('${text.description.replace(/\n/g, '\\n')}')" class="w-full py-2 bg-purple-600/30 text-purple-200 rounded-lg text-xs font-bold">사연 복사하기</button>
+                <button onclick="copyToClipboard('${text.description.replace(/\n/g, '\\n')}')" class="w-full py-2 bg-purple-600/30 text-purple-200 rounded-lg text-xs font-bold transition-all">사연 복사하기</button>
             </div>`).join('');
 
         if (uniqueStations.length > 0) filterRadioByStation(uniqueStations[0]);
@@ -99,149 +102,125 @@ function filterRadioByStation(stationName) {
     document.querySelectorAll('.station-tab-btn').forEach(btn => btn.classList.toggle('tab-active', btn.getAttribute('data-station') === stationName));
     const filtered = allRadioData.filter(item => item.category === stationName);
     radioList.innerHTML = filtered.map(item => `
-        <div class="card p-5 rounded-2xl border border-cyan-500/20">
+        <div class="card p-5 rounded-2xl border border-cyan-500/20 hover:border-cyan-500/50 transition-all">
             <div class="flex justify-between items-start mb-4">
                 <span class="badge text-cyan-400 border-cyan-500/30 bg-cyan-500/10 text-[10px]">${item.category}</span>
                 ${item.title.includes('다중') ? '<span class="badge text-blue-400 border-blue-500/30 bg-blue-500/10 text-[10px]">다중신청</span>' : ''}
             </div>
             <h4 class="text-lg font-black text-white mb-2">${item.title}</h4>
             <p class="text-xs text-gray-400 mb-6 line-clamp-2">${item.description || '플레이브 노래를 신청해 주세요!'}</p>
-            <a href="${item.link}" target="_blank" class="block w-full text-center py-2 bg-cyan-600 text-white rounded-lg text-xs font-bold">신청하러 가기</a>
+            <a href="${item.link}" target="_blank" class="block w-full text-center py-2 bg-cyan-600 text-white rounded-lg text-xs font-bold transition-all">신청하러 가기</a>
         </div>`).join('');
 }
 
-// 1. 오늘 일정 로드 및 렌더링
+// 5. 일정 및 광고 (영문 헤더 매칭)
 async function loadSchedule() {
     const deadlineBox = document.getElementById('today-deadline-votes');
-    const radioBox = document.getElementById('today-radio');
-    const recurringBox = document.getElementById('today-recurring-votes');
-
+    if (!deadlineBox) return;
     try {
-        // [수정] 서버 경로와 시트 탭 이름을 정확히 일치시킵니다
         const res = await axios.get('/api/schedule?type=schedule');
-        const data = res.data.data;
-        
-        // 오늘 날짜 구하기 (YYYY-MM-DD)
-        const today = new Date().toLocaleDateString('ko-KR', {
-            year: 'numeric', month: '2-digit', day: '2-digit'
-        }).replace(/\. /g, '-').replace('.', '');
-
-        // 오늘 일정만 필터링 (시트의 'date' 열 기준)
-        const todayItems = data.filter(item => item.date === today);
-
-        if (todayItems.length === 0) {
-            deadlineBox.innerHTML = '<p class="text-gray-500 text-xs px-2 text-center py-4">오늘 예정된 일정이 없습니다.</p>';
-            return;
-        }
-
-        // 일정 리스트 그리기
-        deadlineBox.innerHTML = todayItems.map(item => `
-            <div class="flex items-center gap-3 p-4 bg-cyan-500/5 rounded-2xl border border-cyan-500/10 mb-3 hover:border-cyan-500/30 transition-all">
-                <div class="flex flex-col items-center min-w-[50px] border-r border-cyan-500/20 pr-3">
-                    <span class="text-cyan-400 font-black text-xs">${item.time || '시간'}</span>
-                    <span class="text-[9px] text-gray-500 uppercase font-bold">${item.category || '기타'}</span>
-                </div>
-                <div class="flex-1">
-                    <h4 class="text-white text-sm font-bold line-clamp-1">${item.title}</h4>
-                    ${item.link ? `<a href="${item.link}" target="_blank" class="text-[10px] text-cyan-500 hover:underline">관련 링크 바로가기 ></a>` : ''}
-                </div>
-            </div>
-        `).join('');
-
-        console.log('✅ 오늘 일정 렌더링 완료');
-    } catch (e) { 
-        console.error('일정 로드 실패:', e);
-        deadlineBox.innerHTML = '<p class="text-red-400 text-xs text-center">데이터를 불러오지 못했습니다.</p>';
-    }
+        const today = new Date().toISOString().split('T')[0];
+        const todayItems = res.data.data.filter(item => item.date === today);
+        deadlineBox.innerHTML = todayItems.length ? todayItems.map(item => `
+            <div class="flex items-center gap-3 p-4 bg-cyan-500/5 rounded-2xl border border-cyan-500/10 mb-2">
+                <span class="text-cyan-400 font-bold text-xs">${item.time}</span>
+                <span class="text-white text-xs font-medium line-clamp-1">${item.title}</span>
+            </div>`).join('') : '<p class="text-gray-500 text-xs text-center py-10">오늘 일정이 없습니다.</p>';
+    } catch (e) { console.error('일정 로드 실패', e); }
 }
 
-// 2. 광고 시안 로드 및 렌더링
 async function loadAds() {
     const container = document.getElementById('ads-list');
     if (!container) return;
-
     try {
         const res = await axios.get('/api/ad-requests?type=ads');
-        const data = res.data.data;
-
-        container.innerHTML = data.map(ad => `
-            <div class="card overflow-hidden rounded-2xl border border-purple-500/20 group hover:border-purple-500/50 transition-all">
-                <div class="aspect-video bg-gray-900 relative overflow-hidden">
-                    <img src="${ad.image}" alt="${ad.title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onerror="this.src='/static/no-image.png'">
-                    <div class="absolute top-2 left-2">
-                        <span class="badge bg-black/60 backdrop-blur-md text-purple-400 border-purple-500/30 text-[10px] font-black">${ad.category}</span>
-                    </div>
+        container.innerHTML = res.data.data.map(ad => `
+            <div class="card rounded-2xl overflow-hidden border border-purple-500/20 group hover:border-purple-500/50 transition-all">
+                <div class="aspect-video relative overflow-hidden bg-gray-900">
+                    <img src="${ad.image}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onerror="this.src='/static/no-image.png'">
+                    <span class="absolute top-2 left-2 badge bg-black/60 text-purple-400 border-purple-500/30 text-[10px]">${ad.category}</span>
                 </div>
-                <div class="p-5">
-                    <h4 class="text-white font-bold text-sm mb-4 line-clamp-1">${ad.title}</h4>
-                    <a href="${ad.link}" target="_blank" class="block w-full text-center py-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 rounded-xl text-[11px] font-black border border-purple-500/30 transition-all">
-                        시안 확인 및 다운로드
-                    </a>
+                <div class="p-4">
+                    <h4 class="text-white font-bold text-sm mb-3 line-clamp-1">${ad.title}</h4>
+                    <a href="${ad.link}" target="_blank" class="block w-full py-2 bg-gray-800 text-cyan-400 text-center rounded-lg text-[10px] font-bold">상세보기</a>
                 </div>
-            </div>
-        `).join('');
-    } catch (e) { 
-        console.error('광고 로드 실패:', e); 
-    }
+            </div>`).join('') || '<p class="col-span-full text-center text-gray-500 py-10">광고 시안이 없습니다.</p>';
+    } catch (e) { console.error('광고 로드 실패', e); }
 }
-// 1. 새 정보 추가 모달 열기 함수
+
+// 6. 모달 제어 (섹션별 필드 자동 생성)
 function openAddModal() {
     const modal = document.getElementById('add-modal');
     const formContent = document.getElementById('form-content');
     if (!modal || !formContent) return;
 
-    // 현재 선택된 탭에 따라 입력 폼을 다르게 구성합니다
     let fields = '';
     if (currentTab === 'votes') {
         fields = `
-            <input type="text" name="category" placeholder="플랫폼 (예: 뮤빗)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
-            <input type="text" name="title" placeholder="투표 제목" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
-            <input type="text" name="link" placeholder="투표 링크 주소" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
-            <input type="text" name="deadline" placeholder="마감 기한 (YYYY-MM-DD)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white">
-        `;
+            <input type="text" name="category" placeholder="플랫폼 (예: 뮤빗)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
+            <input type="text" name="title" placeholder="투표 제목" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
+            <input type="url" name="link" placeholder="투표 링크" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
+            <input type="text" name="deadline" placeholder="마감 (YYYY-MM-DD)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white">`;
     } else if (currentTab === 'radio') {
         fields = `
-            <input type="text" name="category" placeholder="방송사명 (예: MBC)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
-            <input type="text" name="title" placeholder="프로그램명 또는 제목" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
-            <input type="text" name="link" placeholder="신청 게시판 링크" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3">
-            <textarea name="description" placeholder="사연 예시문 내용" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white h-32"></textarea>
-        `;
+            <input type="text" name="category" placeholder="방송사 (예: MBC)" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
+            <input type="text" name="title" placeholder="제목/프로그램" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
+            <input type="url" name="link" placeholder="게시판 링크" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white mb-3" required>
+            <textarea name="description" placeholder="사연 예시" class="w-full p-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-white h-32"></textarea>`;
     } else {
-        fields = `<p class="text-gray-400 text-center py-4">이 섹션은 관리자 페이지에서 추가 가능합니다.</p>`;
+        fields = `<p class="text-gray-400 text-center py-4">이 탭의 내용은 관리 도구에서만 추가 가능합니다.</p>`;
     }
-
     formContent.innerHTML = fields;
     modal.classList.remove('hidden');
 }
 
-// 2. 모달 닫기 함수
 function closeAddModal() {
     const modal = document.getElementById('add-modal');
     if (modal) modal.classList.add('hidden');
 }
-// 7. 유틸리티
+
+// 7. 유틸리티 (복사, 공유, 토스트, 탭 전환)
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => showToast('📋 문구가 복사되었습니다!')); }
-function shareToX(title, url) { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('🗳️ [PLAVE VOTE]\n' + title)}&url=${encodeURIComponent(url)}`, '_blank'); }
+
+function shareToX(title, url) { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('🗳️ [PLAVE VOTE]\n' + title + '\n지금 바로 참여하세요! ✨\n\n#PLAVE #플레이브 #PLLI #플리')}&url=${encodeURIComponent(url)}`, '_blank'); }
+
+function toggleVote(voteId) {
+    let completed = JSON.parse(localStorage.getItem('completed_votes') || '[]');
+    completed.includes(voteId) ? completed = completed.filter(id => id !== voteId) : completed.push(voteId);
+    localStorage.setItem('completed_votes', JSON.stringify(completed));
+    if (completed.includes(voteId)) showToast('오늘의 투표 완료! 💙💜💗❤️🖤');
+    renderVotes();
+}
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
+    const target = document.getElementById(`content-${tab}`);
+    if (target) target.classList.remove('hidden');
+    
+    // 버튼 스타일 업데이트
+    document.querySelectorAll('[id^="tab-"]').forEach(btn => btn.classList.remove('tab-active', 'text-cyan-300'));
+    const activeBtn = document.getElementById(`tab-${tab}`);
+    if (activeBtn) activeBtn.classList.add('tab-active', 'text-cyan-300');
+
+    if (tab === 'radio') renderRadioSection();
+    if (tab === 'votes') loadVotes();
+}
+
 function showToast(msg) {
     const toast = document.createElement('div');
-    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 bg-cyan-600 text-white font-bold rounded-full shadow-2xl';
+    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 bg-cyan-600 text-white font-bold rounded-full shadow-2xl animate-bounce';
     toast.innerText = msg;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
+
 function checkMemberAnniversaries() {
     const today = new Date().toISOString().slice(5, 10);
     const member = PLAVE_ANNIVERSARIES.find(m => m.date === today);
     const banner = document.getElementById('anniversary-banner');
     if (member && banner) {
-        banner.innerHTML = `<div class="p-4 bg-pink-600 text-white text-center font-black">🎉 오늘 ${member.name}의 생일입니다! 🎊</div>`;
+        banner.innerHTML = `<div class="p-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-center font-black animate-pulse">🎂 오늘 PLAVE의 보물, ${member.name}의 생일입니다! 모두 축하해 주세요! 💙💜💗❤️🖤</div>`;
         banner.classList.remove('hidden');
     }
-}
-function switchTab(tab) {
-    document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
-    const target = document.getElementById(`content-${tab}`);
-    if (target) target.classList.remove('hidden');
-    if (tab === 'radio') renderRadioSection();
-    if (tab === 'votes') loadVotes();
 }
