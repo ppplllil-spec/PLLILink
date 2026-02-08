@@ -224,3 +224,7 @@ function checkMemberAnniversaries() {
         banner.classList.remove('hidden');
     }
 }
+function updateNotificationButtonStatus() {
+    console.log("알림 상태 확인 중...");
+    // 기능이 당장 필요 없다면 이렇게 비워두기만 해도 에러가 사라집니다.
+}
