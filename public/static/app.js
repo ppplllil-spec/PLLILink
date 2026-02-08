@@ -37,7 +37,7 @@ async function initApp() {
 // 3. 투표 섹션 (중요도 정렬 및 체크박스)
 async function loadVotes() {
     try {
-        const res = await axios.get('/api/votes?type=votes');
+        const res = await axios.get('/api/votes?type=votes')
         allVotes = res.data.data;
         renderVotes();
     } catch (err) { console.error('투표 로드 실패:', err); }
