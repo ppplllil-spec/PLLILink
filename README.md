@@ -14,31 +14,49 @@
   - 투표앱별 팁 공유 및 '도움됨' 반응 시스템
   - **링크 자동 인식** ⭐ - URL 입력 시 자동으로 제목, 설명 등 메타데이터 추출
   - **일정 관리** ⭐ - 오늘 마감 투표, 매일 반복 투표, 오늘 라디오 요청
-  - **해외 라디오 예시문** ⭐ NEW - 방송국별 신청 예시문 제공 및 원클릭 복사
-  - **PWA 지원** ⭐ NEW - 스마트폰 홈 화면에 앱으로 설치 가능
+  - **라디오 예시문 작성** ⭐ NEW - 등록/수정 시 예시문 작성 및 관리, 원클릭 복사
+  - **검색/필터** ⭐ NEW - 투표 제목/플랫폼 검색, 마감임박/반복/완료 필터링
+  - **SNS 공유** ⭐ NEW - Twitter, Facebook, KakaoTalk, LINE 원클릭 공유
+  - **브라우저 알림** ⭐ NEW - 마감 1시간/3시간 전 자동 알림
+  - **투표 인증서** ⭐ NEW - 완료한 투표 목록 인증서 이미지 생성 및 다운로드
+  - **PWA 지원** ⭐ - 스마트폰 홈 화면에 앱으로 설치 가능
 
 ## 🌐 URL
 
+- **GitHub Repository**: https://github.com/ppplllil-spec/PLLILink
 - **개발 서버**: https://3000-i5354ajam1oqpq3wdemye-02b9cc79.sandbox.novita.ai
 - **API Base URL**: https://3000-i5354ajam1oqpq3wdemye-02b9cc79.sandbox.novita.ai/api
 
 ## ✨ 주요 기능
 
-### 1. 투표 정보 관리
-- 투표 제목, 설명, URL, 플랫폼, 마감일 등록
-- 플랫폼별 분류 (Twitter, Mnet, Billboard 등)
-- 투표 링크 원클릭 이동
-- 각 투표별 팁 조회 기능
+### 1. 투표 정보 관리 ⭐ 대폭 개선
+- 투표 제목, 설명, URL, 플랫폼, 마감일 등록/수정
+- **실시간 검색**: 제목, 플랫폼으로 즉시 검색
+- **스마트 필터링**: 전체/마감임박(24시간)/반복/완료/미완료
+- **투표 완료 체크박스**: 완료한 투표 체크 및 진행률 표시
+- **실시간 카운트다운**: 마감까지 남은 시간 초 단위 업데이트
+- **SNS 공유**: Twitter, Facebook, KakaoTalk, LINE 원클릭 공유
+- **링크 복사**: 투표 URL 원클릭 복사
+- **투표 인증서 생성**: 완료한 투표 목록을 이미지로 생성 및 다운로드
+- **브라우저 알림**: 마감 1시간 전(긴급), 3시간 전 자동 알림
+- **투표 팁 연동**: 각 투표별 팁 바로 보기
+- **모달 수정**: 전체 필드를 한번에 수정 가능한 UI
 
 ### 2. 광고 시안 요청 관리
 - 광고 제목, 위치, 설명, 연락처 등록
 - 상태 관리 (모집중, 진행중, 마감)
 - 마감일 설정
 
-### 3. 라디오 신청 정보 관리
-- 방송국 및 프로그램 정보 등록
+### 3. 라디오 신청 정보 관리 ⭐ 예시문 기능 추가
+- 방송국 및 프로그램 정보 등록/수정
 - 국내/해외 분류 필터링
 - 신청 방법 및 URL 제공
+- **예시문 작성**: 등록 시 신청 예시문 함께 작성 (5줄 textarea)
+- **예시문 보기**: 원클릭으로 예시문 확인 및 복사
+- **예시문 관리**: 등록 후에도 예시문 추가/수정/삭제 가능
+- **모달 수정**: 모든 정보를 한번에 수정 가능
+- **강조된 UI**: 예시문 섹션을 시각적으로 강조 (그라데이션 배경, 점선 테두리)
+- **작성 가이드**: 예시문 작성 팁 3가지 제공
 
 ### 4. 투표 팁 공유 시스템 ⭐ NEW
 - 플랫폼별 투표 팁 공유
@@ -89,7 +107,7 @@
 - id, title, description, location, contact_info, deadline, status, category, created_by, created_at, updated_at
 
 #### 3. radio_requests (라디오 신청 정보)
-- id, title, station_name, program_name, request_url, request_method, country, description, category, created_by, created_at, updated_at
+- id, title, station_name, program_name, request_url, request_method, country, description, **example_text (예시문)**, category, created_by, created_at, updated_at
 
 #### 4. vote_tips (투표 팁)
 - id, vote_id (FK), platform, tip_title, tip_content, is_verified, helpful_count, created_by, created_at, updated_at
@@ -282,7 +300,14 @@
 - **가독성 우수**: Pretendard & Inter 폰트로 한글/영문 최적화
 
 ### 마지막 업데이트
-2026-02-07
+2026-02-08
+
+**최신 변경사항 (v2.1)**:
+- 🎨 예시문 필드 UI/UX 대폭 개선 (강조된 박스 디자인, 작성 팁 제공)
+- 🔧 알림 버튼 상태 업데이트 버그 수정
+- ✨ 투표 수정 모달 추가 (모든 필드 한번에 수정)
+- 🎯 라디오 예시문 관리 시스템 완성
+- ♻️ 이벤트 위임 패턴 적용 (CSP 준수, 메모리 최적화)
 
 ## 🛠️ 로컬 개발
 
@@ -372,9 +397,13 @@ curl http://localhost:3000/api/votes
 ## 📈 향후 개발 계획
 
 ### 완료된 기능
-- ✅ 투표 정보 CRUD
+- ✅ 투표 정보 CRUD (검색/필터/완료체크/카운트다운/알림/인증서)
+- ✅ SNS 공유 기능 (Twitter, Facebook, KakaoTalk, LINE)
+- ✅ 브라우저 알림 (마감 1시간/3시간 전 자동 알림)
+- ✅ 투표 인증서 생성 (Canvas API, PNG 다운로드)
 - ✅ 광고 시안 요청 CRUD
-- ✅ 라디오 신청 정보 CRUD
+- ✅ 라디오 신청 정보 CRUD (예시문 작성/관리)
+- ✅ 라디오 예시문 시스템 (등록/수정/복사)
 - ✅ 투표앱별 팁 공유 시스템
 - ✅ 팁 '도움됨' 반응 시스템
 - ✅ 실시간 목록 표시
@@ -382,8 +411,9 @@ curl http://localhost:3000/api/votes
 - ✅ PLAVE 테마 (사이버틱 네온 스타일)
 - ✅ 링크 자동 인식 (URL 메타데이터 추출)
 - ✅ 일정 관리 (오늘 마감, 매일 반복, 요일별 설정)
-- ✅ 해외 라디오 예시문 (8개 방송국, 자동 치환, 복사 기능)
 - ✅ PWA 지원 (앱 설치, Service Worker, 오프라인)
+- ✅ 이벤트 위임 패턴 (CSP 준수, 메모리 누수 방지)
+- ✅ 예시문 필드 UI/UX 개선 (강조된 디자인, 작성 가이드)
 
 ### 추천 개발 항목
 1. **사용자 인증 시스템**
